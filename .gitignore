@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+.tmp/
+
+# Vite+ 生成的 Git hook dispatcher（项目自己的 hook 在 .vite-hooks/pre-commit）
+.vite-hooks/_/

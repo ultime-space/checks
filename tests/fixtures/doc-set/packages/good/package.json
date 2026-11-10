@@ -1,0 +1,8 @@
+{
+  "name": "@ultime/good",
+  "version": "0.2.1",
+  "exports": {
+    ".": { "import": "./dist/index.js" },
+    "./tools": { "import": "./dist/tools.js" }
+  }
+}

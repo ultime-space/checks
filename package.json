@@ -1,0 +1,70 @@
+{
+  "name": "@ultime/checks",
+  "version": "0.1.0",
+  "description": "通用的仓库约束检测工具：CLI 与 Node API，规则由配置注入",
+  "keywords": [
+    "architecture",
+    "ci",
+    "code-quality",
+    "lint",
+    "static-analysis",
+    "typescript"
+  ],
+  "homepage": "https://github.com/ultime-space/checks#readme",
+  "bugs": {
+    "url": "https://github.com/ultime-space/checks/issues"
+  },
+  "license": "MIT",
+  "author": "Ultime contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ultime-space/checks.git"
+  },
+  "bin": {
+    "checks": "./bin/checks.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "docs/rules",
+    "README.md",
+    "USAGE.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "llms.txt",
+    "SKILLS.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "check": "vp check",
+    "test": "vp test",
+    "fmt": "vp fmt",
+    "prepublishOnly": "pnpm check && pnpm test && pnpm build",
+    "prepare": "vp config --no-agent"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "^0.18.5",
+    "@types/node": "^22.20.5",
+    "publint": "^0.3.25",
+    "typescript": "^5.9.3",
+    "unplugin-unused": "^0.6.0",
+    "vite-plus": "1.5.1"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@12.6.0"
+}

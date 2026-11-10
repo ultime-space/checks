@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: voidzero-dev/setup-vp@v1.22.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: true
+
+      - run: pnpm check
+
+      - run: pnpm test
+
+      - run: pnpm build
+        if: matrix.node == 24
+
+      - run: npm pack --dry-run
+        if: matrix.node == 24

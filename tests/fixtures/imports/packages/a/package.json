@@ -1,0 +1,8 @@
+{
+  "name": "@ultime/a",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@ultime/b": "^0.0.0"
+  }
+}

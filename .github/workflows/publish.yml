@@ -1,0 +1,69 @@
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Trusted Publishing（OIDC）必需
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm for Trusted Publishing
+        run: npm install -g npm@11
+
+      - name: Reject placeholder package
+        run: |
+          node -e 'const p=require("./package.json"); if (p.private === true) { console.error("package is private; refusing to publish"); process.exit(1) } if (!p.version || p.version === "0.0.0") { console.error("placeholder version 0.0.0; set a real version before publishing"); process.exit(1) }'
+
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          node -e 'const v=require("./package.json").version; const tag=process.env.GITHUB_REF_NAME; if (tag !== "v" + v) { console.error("tag " + tag + " does not match v" + v); process.exit(1) }'
+
+      - name: Check version is not published
+        id: check
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$name@$version 已存在，跳过发布，仅做校验"
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      # 走 npm CLI：Trusted Publishing（OIDC）以 npm 为官方路径。
+      # npm 同样会跑 prepublishOnly（check / test / build），产物不进 git 但进 tarball。
+      - name: Publish
+        if: steps.check.outputs.published != 'true'
+        run: npm publish --access public --provenance
+
+      - name: Verify published
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          for i in $(seq 1 20); do
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version 已在 registry 上"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::$name@$version 发布后 5 分钟仍查不到，检查 Publish 步骤日志"
+          exit 1

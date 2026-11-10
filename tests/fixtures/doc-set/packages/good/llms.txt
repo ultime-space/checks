@@ -1,0 +1,6 @@
+# good
+
+> 定位：AI 索引。
+> 适用版本：0.2.x
+
+- [SKILLS.md](./SKILLS.md)
