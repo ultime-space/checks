@@ -1,3 +1,4 @@
+import { extname } from 'node:path'
 import { ChecksError } from '../config'
 import { extractImports } from '../imports'
 import type { Finding, Rule, RuleContext } from '../types'
@@ -7,6 +8,23 @@ interface Edge {
   line: number
 }
 
+/** 只对代码图找环；Markdown / HTML 的链接不是模块依赖。 */
+const CODE_EXT = new Set([
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.vue',
+  '.css',
+  '.scss',
+  '.sass',
+  '.less',
+])
+
 const parseBoolean = (value: unknown, field: string, fallback: boolean): boolean => {
   if (value === undefined) return fallback
   if (typeof value !== 'boolean') throw new ChecksError(`cycles.${field} 必须是布尔值`, 'CONFIG')
@@ -14,10 +32,11 @@ const parseBoolean = (value: unknown, field: string, fallback: boolean): boolean
 }
 
 async function buildGraph(ctx: RuleContext, ignoreTypeOnly: boolean): Promise<Map<string, Edge[]>> {
-  const nodes = new Set(ctx.files)
+  const files = ctx.files.filter((file) => CODE_EXT.has(extname(file).toLowerCase()))
+  const nodes = new Set(files)
   const graph = new Map<string, Edge[]>()
 
-  for (const file of ctx.files) {
+  for (const file of files) {
     const edges: Edge[] = []
     for (const ref of extractImports(ctx.read(file), file)) {
       if (ignoreTypeOnly && ref.typeOnly) continue

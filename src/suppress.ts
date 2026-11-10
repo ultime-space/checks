@@ -57,20 +57,9 @@ export function applySuppressions(
     } catch {
       continue
     }
-    if (!text.includes(KEYWORD) && !text.includes('boundary-allow:')) continue
+    if (!text.includes(KEYWORD)) continue
 
     text.split('\n').forEach((line, index) => {
-      const legacy = line.includes('boundary-allow:')
-      if (legacy) {
-        const target = index + 2
-        const byLine = directives.get(file) ?? new Map<number, Directive[]>()
-        const list = byLine.get(target) ?? []
-        list.push({ ruleId: '*', reason: 'legacy', line: index + 1 })
-        byLine.set(target, list)
-        directives.set(file, byLine)
-        return
-      }
-
       const parsed = parse(line)
       if (!parsed) return
       const lineNumber = index + 1

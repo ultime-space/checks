@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-11-11
+
+### Changed
+
+- `checks/cycles` 只对代码文件建图；Markdown / HTML 链接不再参与。
+- 移除 legacy `boundary-allow:` 抑制语法，统一使用 `checks-ignore-next-line`。
+
 ## 0.1.1 - 2026-11-11
 
 ### Changed

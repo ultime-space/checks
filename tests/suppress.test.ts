@@ -46,4 +46,9 @@ describe('行内抑制', () => {
     const report = await lint('// checks-ignore-next-line text reason="历史"\n\n// 内部\n')
     expect(report.errorCount).toBe(1)
   })
+
+  it('不再识别 legacy boundary-allow', async () => {
+    const report = await lint('// boundary-allow: 历史\n// 内部\n')
+    expect(report.errorCount).toBe(1)
+  })
 })

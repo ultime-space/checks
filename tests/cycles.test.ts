@@ -17,6 +17,7 @@ describe('checks/cycles', () => {
     const report = await run(base)
     expect(filesOf(report.results)).toEqual(['a.ts', 'e.ts', 'self.ts', 'type-a.ts'])
     expect(report.results.some((result) => result.filePath.endsWith('c.ts'))).toBe(false)
+    expect(report.results.some((result) => result.filePath.endsWith('.md'))).toBe(false)
   })
 
   it('ignoreTypeOnly 时跳过 type-only 环', async () => {

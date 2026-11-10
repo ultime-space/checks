@@ -282,7 +282,6 @@ const legacy = '旧文案'
 - `reason` 必填；缺失时不生效，并报 `checks/suppress`。
 - `expires` 为 `YYYY-MM-DD`；过期后报 `checks/suppress`。
 - 只能抑制带行号的结果；文件级结果无法行内抑制。
-- 兼容旧写法：`boundary-allow: <理由>` 会抑制下一行的**所有规则**，理由记为 `legacy`；迁移完成后应删除。
 
 ---
 
