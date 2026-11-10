@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-11-11
+
+### Changed
+
+- 验证 Trusted Publishing（OIDC）发布链路；无运行时变更。
+
 ## 0.1.0 - 2026-11-11
 
 ### Added
