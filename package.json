@@ -1,6 +1,6 @@
 {
   "name": "@ultime/checks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "通用的仓库约束检测工具：CLI 与 Node API，规则由配置注入",
   "keywords": [
     "architecture",
