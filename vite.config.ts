@@ -38,7 +38,8 @@ export default defineConfig({
     platform: 'node',
     target: 'node22',
     dts: true,
-    minify: false,
+    // 发布产物默认压缩：注释与说明留在源码与文档，不随 dist 发布。
+    minify: true,
     sourcemap: false,
     clean: true,
     publint: true,
