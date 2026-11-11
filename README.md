@@ -144,6 +144,7 @@ console.log(report.errorCount, report.warningCount, report.results)
 | `LICENSE` / `SECURITY.md` / `CONTRIBUTING.md` | 许可、安全与贡献约定 |
 
 发布包不含 `src/`、`tests/`、`scripts/`、`AGENTS.md`、`rules/`。
+`dist/*.js` 默认压缩；类型与声明保持可读，注释与说明留在源码与文档。
 
 ## 边界
 
