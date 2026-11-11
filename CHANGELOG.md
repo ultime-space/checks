@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-11-11
+
+### Changed
+
+- 发布产物默认压缩：`dist/*.js` 开启 `minify`，去掉格式与注释；`dist/*.d.ts` 保持可读，`sourcemap` 仍不随包发布。
+- `README` 同步产物说明；`AGENTS.md` / `llms.txt` / `SKILLS.md` 版本戳同步到 0.2.x。
+
 ## 0.2.0 - 2026-11-11
 
 ### Changed
