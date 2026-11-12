@@ -22,7 +22,7 @@ export const defineConfig = <T extends ChecksConfig>(config: T): T => config
 
 const SEVERITIES = new Set<Severity>(['error', 'warn'])
 
-const CONFIG_KEYS = ['workspace', 'roots', 'ignore', 'baseline', 'rules', 'overrides'] as const
+const CONFIG_KEYS = ['$schema', 'workspace', 'roots', 'ignore', 'baseline', 'rules', 'overrides'] as const
 const RULE_KEYS = ['use', 'severity', 'options', 'timeout'] as const
 const OVERRIDE_KEYS = ['files', 'rules'] as const
 
@@ -80,6 +80,10 @@ export function validateConfig(input: unknown): ChecksConfig {
   if (!isObject(input)) throw new ChecksError('配置必须是对象', 'CONFIG_FIELD')
 
   assertKnownKeys(input, CONFIG_KEYS, '')
+
+  if (input.$schema !== undefined && typeof input.$schema !== 'string') {
+    throw new ChecksError('$schema 必须是字符串', 'CONFIG_FIELD', '$schema')
+  }
 
   const workspace = assertString(input.workspace, 'workspace')
   const baseline = assertString(input.baseline, 'baseline')
