@@ -20,5 +20,5 @@
 ## 入口
 
 - 配置：`checks.config.mjs`
-- CLI：`checks run` / `checks rules` / `checks explain <rule>`
+- CLI：`ultime-checks run` / `ultime-checks rules` / `ultime-checks explain <rule>`
 - Node API：`import { createChecker } from '@ultime/checks'`

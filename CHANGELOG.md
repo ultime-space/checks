@@ -2,9 +2,13 @@
 
 ## 0.3.0 - 待发布
 
+### Breaking
+
+- CLI 命令从 `checks` 改为 `ultime-checks`，不保留旧 bin；需要同步更新 `package.json` scripts 与 CI 调用。
+- `workspace` 从语义标记变为检测根：`roots` / `ignore` / `overrides.files` / `baseline` 与结果路径都相对它；`--changed` / `--since` 也从该根取改动。
+
 ### Added
 
-- `workspace` 从语义标记变为检测根：`roots` / `ignore` / `overrides.files` / `baseline` 与结果路径都相对它；`--changed` / `--since` 也从该根取改动。
 - Node API 新增 `checker.workspaceRoot`。
 
 ### Changed
