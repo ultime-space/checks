@@ -469,6 +469,7 @@ steps:
 | `找不到配置文件` | 建 `checks.config.mjs`，或用 `--config` 指定 |
 | 退出码 2 + `未知字段` | 配置里写了不认识的字段；按提示的可用字段改名 |
 | 退出码 2 + `未知规则` | `use` 拼写错误；用 `ultime-checks rules` 查看 |
+| 退出码 2 + `不支持选项` | options 键拼错；按提示的可用键改名 |
 | 退出码 2 + `workspace 目录不存在` | `workspace` 相对 `--cwd`，确认路径与启动目录 |
 | `无法解析引用` 不阻断 | `unresolved` 固定 `warn`（`locked`），当前不支持升级为 error；先修路径，或把阻断交给 `imports` 的 `forbid` 等规则 |
 | `checks/suppress` 报缺少 reason | 指令必须写 `reason="…"` |

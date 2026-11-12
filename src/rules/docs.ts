@@ -185,6 +185,7 @@ function checkAnchor(
 export const docsRule: Rule = {
   name: 'docs',
   description: '检查相对链接、锚点、头部标记、开发计划状态与孤儿文档',
+  optionKeys: ['roots', 'extraFiles', 'head', 'status', 'anchors', 'generated', 'orphanAllow'],
   run(ctx, rawOptions) {
     const options = parseOptions(rawOptions)
     const headings = new Map<string, Headings>()

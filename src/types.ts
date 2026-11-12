@@ -123,6 +123,8 @@ export interface RuleContext {
 export interface Rule {
   name: string
   description: string
+  /** 允许的 options 键；声明后运行时拒绝未知键，避免拼错导致规则静默失效 */
+  optionKeys?: readonly string[]
   run(ctx: RuleContext, options: Record<string, unknown>): Finding[] | Promise<Finding[]>
 }
 
