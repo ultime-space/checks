@@ -1,5 +1,5 @@
 export { createChecker } from './api'
-export { ChecksError, defineConfig, loadConfig } from './config'
+export { ChecksError, defineConfig, loadConfig, type ErrorCode } from './config'
 export type {
   CheckMessage,
   CheckReport,

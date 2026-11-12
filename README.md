@@ -87,7 +87,7 @@ npx checks run --changed
 | `baseline` | `.checks-baseline.json` | 基线文件路径 |
 | `rules` | `[]` | 规则实例；`use` 为规则名，`severity` 为 `error` / `warn` |
 | `overrides` | — | 按 glob 覆盖同名规则的选项 |
-| `workspace` | — | 保留字段，当前只作语义标记 |
+| `workspace` | — | 检测根，相对 `--cwd`；扫描、基线、overrides 与结果路径都相对它 |
 
 ### 规则
 
@@ -130,8 +130,9 @@ console.log(report.errorCount, report.warningCount, report.results)
 ```
 
 - `createChecker(options)`：`cwd` / `config`（路径或对象）/ `baseline`（路径或 `false`）/ `resolver`。
+- `checker.workspaceRoot` 是解析后的检测根；未配置 `workspace` 时等于 `cwd`。
 - `report.results` 贴 ESLint `LintResult` 形状（`filePath` / `messages[{ ruleId, severity, message, line, column }]`）。
-- 路径均为相对 `cwd` 的 posix 路径。
+- 路径均为相对 workspace 根的 posix 路径。
 
 ## 产物与目录
 

@@ -79,7 +79,7 @@ export interface ChecksOverride {
 }
 
 export interface ChecksConfig {
-  /** 填了按 workspace 模式解析；首版先只作为语义标记保留。 */
+  /** 检测根，相对 `cwd`；roots / ignore / overrides / baseline 与结果路径都相对它。 */
   workspace?: string
   roots?: string[]
   ignore?: string[]
@@ -89,6 +89,7 @@ export interface ChecksConfig {
 }
 
 export interface CheckerOptions {
+  /** 启动目录：配置文件解析基准；检测根由 `workspace` 决定。 */
   cwd?: string
   config?: string | ChecksConfig
   /** 基线文件；`false` 关闭，缺省用配置值或 `.checks-baseline.json`。 */
@@ -124,6 +125,8 @@ export interface Rule {
 }
 
 export interface Checker {
+  /** 检测根：配置了 `workspace` 时是解析后的绝对路径，否则等于 `cwd`。 */
+  readonly workspaceRoot: string
   lintFiles(patterns?: string[], options?: RunOptions): Promise<CheckReport>
   lintText(code: string, options: { filePath: string } & RunOptions): Promise<CheckReport>
   getConfig(): ChecksConfig

@@ -61,12 +61,12 @@ describe('createChecker', () => {
   })
 
   it('未知规则抛 ChecksError', async () => {
-    const checker = await createChecker({
-      cwd: process.cwd(),
-      config: { rules: [{ use: 'nope' }] },
-    })
-
-    await expect(checker.lintText('const a = 1\n', { filePath: 'a.ts' })).rejects.toMatchObject({ code: 'CONFIG' })
+    await expect(
+      createChecker({
+        cwd: process.cwd(),
+        config: { rules: [{ use: 'nope' }] },
+      }),
+    ).rejects.toMatchObject({ code: 'CONFIG_RULE' })
   })
 
   it('配置文件缺失时抛 CONFIG 错误', async () => {

@@ -78,6 +78,8 @@ describe('checks/imports', () => {
       config: { rules: [{ use: 'imports', options: { forbid: ['('] } }] },
     })
 
-    await expect(broken.lintText('const a = 1\n', { filePath: 'a.ts' })).rejects.toMatchObject({ code: 'CONFIG' })
+    await expect(broken.lintText('const a = 1\n', { filePath: 'a.ts' })).rejects.toMatchObject({
+      code: 'CONFIG_OPTION',
+    })
   })
 })
