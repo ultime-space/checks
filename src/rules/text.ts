@@ -111,6 +111,7 @@ function includeFile(file: string, include: NonNullable<TextRuleOptions['include
 export const textRule: Rule = {
   name: 'text',
   description: '按词表 / 正则扫描文本，支持 scope、include 与 accept 白名单',
+  optionKeys: ['scope', 'include', 'deny', 'warn', 'accept'],
   run(ctx, rawOptions) {
     const options = parseOptions(rawOptions)
     const matchers = [

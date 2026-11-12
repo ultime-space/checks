@@ -123,6 +123,7 @@ function ownerFor(cwd: string, file: string, roots: string[], cache: Map<string,
 export const importsRule: Rule = {
   name: 'imports',
   description: '检查相对路径边界、禁止的说明符与内部包依赖声明',
+  optionKeys: ['packageRoots', 'packages', 'forbid', 'internalSrc', 'requireDeclared'],
   async run(ctx, rawOptions) {
     const options = parseOptions(rawOptions)
     const ownerCache = new Map<string, Owner>()

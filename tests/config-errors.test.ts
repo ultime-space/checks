@@ -90,6 +90,45 @@ describe('配置诊断', () => {
     })
   })
 
+  it('未知 options 键给出 CONFIG_OPTION 与具体键路径', async () => {
+    const checker = await createChecker({
+      cwd: process.cwd(),
+      config: { rules: [{ use: 'text', options: { denies: ['x'] } }] },
+    })
+    await expect(checker.lintText('const a = 1\n', { filePath: 'a.ts' })).rejects.toMatchObject({
+      code: 'CONFIG_OPTION',
+      path: 'rules[0].options.denies',
+    })
+  })
+
+  it('override 引入的未知选项指回 override 路径', async () => {
+    const checker = await createChecker({
+      cwd: process.cwd(),
+      config: {
+        rules: [{ use: 'text', options: { include: 'comments' } }],
+        overrides: [{ files: ['docs/**'], rules: [{ use: 'text', options: { denies: ['x'] } }] }],
+      },
+    })
+    await expect(checker.lintText('const a = 1\n', { filePath: 'docs/a.ts' })).rejects.toMatchObject({
+      code: 'CONFIG_OPTION',
+      path: 'overrides[0].rules[0].options.denies',
+    })
+  })
+
+  it('override 只改 severity 时，坏选项仍指回基础规则', async () => {
+    const checker = await createChecker({
+      cwd: process.cwd(),
+      config: {
+        rules: [{ use: 'text', options: { denies: ['x'] } }],
+        overrides: [{ files: ['docs/**'], rules: [{ use: 'text', severity: 'warn' }] }],
+      },
+    })
+    await expect(checker.lintText('const a = 1\n', { filePath: 'docs/a.ts' })).rejects.toMatchObject({
+      code: 'CONFIG_OPTION',
+      path: 'rules[0].options.denies',
+    })
+  })
+
   it('CLI 打印字段路径并以 2 退出', async () => {
     const dir = tempDir()
     fs.writeFileSync(path.join(dir, 'checks.config.mjs'), 'export default { rootz: ["src"] }\n')

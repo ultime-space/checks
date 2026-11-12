@@ -31,6 +31,7 @@ const asIgnore = (value: unknown): RegExp[] => {
 export const unresolvedRule: Rule = {
   name: 'unresolved',
   description: '报告无法解析的相对引用，避免解析失败被当成没有违规',
+  optionKeys: ['scope', 'ignore'],
   async run(ctx, rawOptions) {
     const scope = asScope(rawOptions.scope) ?? []
     const ignore = asIgnore(rawOptions.ignore)

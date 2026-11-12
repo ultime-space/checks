@@ -87,6 +87,18 @@ function exportIssues(packageName: string, exportsField: Record<string, unknown>
 export const docSetRule: Rule = {
   name: 'doc-set',
   description: '检查包内 AI 文档齐全、版本戳、路由、出口覆盖与包根命名',
+  optionKeys: [
+    'packages',
+    'files',
+    'version',
+    'versionMarker',
+    'headWindow',
+    'routing',
+    'exports',
+    'naming',
+    'rulesMin',
+    'allowRootDocs',
+  ],
   run(ctx, rawOptions) {
     const options = parseOptions(rawOptions)
     if (options.packages.length === 0) return []

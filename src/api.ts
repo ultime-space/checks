@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { applyBaseline, readBaseline } from './baseline'
-import { ChecksError, loadConfig, resolveWorkspaceRoot, rulesForFile } from './config'
+import { ChecksError, loadConfig, resolveWorkspaceRoot, rulesForFile, type SourcedRuleConfig } from './config'
 import { toReport } from './findings'
 import { resolveImport } from './imports'
 import { builtinRules } from './rules'
@@ -64,18 +64,6 @@ function assertKnownRules(config: ChecksConfig): void {
   }
 }
 
-/** 规则在运行时才发现 options 非法：回填配置里的规则路径，便于定位。 */
-function optionsPath(config: ChecksConfig, use: string): string | undefined {
-  const index = config.rules?.findIndex((rule) => rule.use === use) ?? -1
-  if (index >= 0) return `rules[${index}].options`
-
-  for (const [overrideIndex, override] of (config.overrides ?? []).entries()) {
-    const found = override.rules.findIndex((rule) => rule.use === use)
-    if (found >= 0) return `overrides[${overrideIndex}].rules[${found}].options`
-  }
-  return undefined
-}
-
 function createContext(
   root: string,
   files: string[],
@@ -131,7 +119,7 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
       if (entry.code !== undefined) overlay.set(entry.file, entry.code)
     }
 
-    const groups = new Map<string, { rules: RuleConfig[]; files: string[] }>()
+    const groups = new Map<string, { rules: SourcedRuleConfig[]; files: string[] }>()
     for (const file of files) {
       const rules = rulesForFile(config, file)
       const key = JSON.stringify(rules)
@@ -146,11 +134,22 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
     for (const group of groups.values()) {
       const context = createContext(root, group.files, overlay, config.ignore ?? [], options.resolver)
 
-      for (const ruleConfig of group.rules) {
+      for (const { config: ruleConfig, path: rulePath } of group.rules) {
         if (signal?.aborted) throw signal.reason ?? new Error('aborted')
 
         const rule = builtinRules[ruleConfig.use]
-        if (!rule) throw new ChecksError(`未知规则：${ruleConfig.use}`, 'CONFIG_RULE')
+        if (!rule) throw new ChecksError(`未知规则：${ruleConfig.use}`, 'CONFIG_RULE', `${rulePath}.use`)
+
+        if (rule.optionKeys) {
+          for (const key of Object.keys(ruleConfig.options ?? {})) {
+            if (rule.optionKeys.includes(key)) continue
+            throw new ChecksError(
+              `${rule.name} 不支持选项：${key}（可用：${rule.optionKeys.join(' / ') || '无'}）`,
+              'CONFIG_OPTION',
+              `${rulePath}.options.${key}`,
+            )
+          }
+        }
 
         const ruleId = `checks/${rule.name}`
         let produced: Finding[]
@@ -163,7 +162,7 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
         } catch (error) {
           if (error instanceof ChecksError) {
             if (error.code !== 'CONFIG' && error.code !== 'CONFIG_OPTION') throw error
-            throw new ChecksError(error.message, 'CONFIG_OPTION', error.path ?? optionsPath(config, ruleConfig.use))
+            throw new ChecksError(error.message, 'CONFIG_OPTION', error.path ?? `${rulePath}.options`)
           }
           throw new ChecksError(
             `规则执行失败：${ruleId}（${error instanceof Error ? error.message : String(error)}）`,

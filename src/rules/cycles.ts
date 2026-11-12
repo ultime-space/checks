@@ -130,6 +130,7 @@ function shortestCycle(graph: Map<string, Edge[]>, component: string[], start: s
 export const cyclesRule: Rule = {
   name: 'cycles',
   description: '基于相对引用图找环（可选规则，默认关闭）',
+  optionKeys: ['ignoreTypeOnly'],
   async run(ctx, rawOptions) {
     const ignoreTypeOnly = parseBoolean(rawOptions.ignoreTypeOnly, 'ignoreTypeOnly', false)
     const graph = await buildGraph(ctx, ignoreTypeOnly)

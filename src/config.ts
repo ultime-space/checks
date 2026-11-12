@@ -160,16 +160,42 @@ export async function loadConfig(options: { cwd: string; config?: string | Check
   return validateConfig(module.default)
 }
 
+/** 规则实例 + 它在配置里的路径；路径用于诊断定位。 */
+export interface SourcedRuleConfig {
+  config: RuleConfig
+  path: string
+}
+
 /** 先取基础规则，再用命中的 overrides 覆盖同名规则。 */
-export function rulesForFile(config: ChecksConfig, file: string): RuleConfig[] {
-  const rules = (config.rules ?? []).map((rule) => ({ ...rule }))
-  for (const override of config.overrides ?? []) {
+export function rulesForFile(config: ChecksConfig, file: string): SourcedRuleConfig[] {
+  const entries: SourcedRuleConfig[] = (config.rules ?? []).map((rule, index) => ({
+    config: { ...rule },
+    path: `rules[${index}]`,
+  }))
+
+  for (const [overrideIndex, override] of (config.overrides ?? []).entries()) {
     if (!override.files.some((pattern) => matchGlob(pattern, file))) continue
-    for (const rule of override.rules) {
-      const index = rules.findIndex((item) => item.use === rule.use)
-      if (index === -1) rules.push({ ...rule })
-      else rules[index] = { ...rules[index], ...rule, options: { ...rules[index]?.options, ...rule.options } }
+
+    for (const [ruleIndex, rule] of override.rules.entries()) {
+      const path = `overrides[${overrideIndex}].rules[${ruleIndex}]`
+      const index = entries.findIndex((entry) => entry.config.use === rule.use)
+      if (index === -1) {
+        entries.push({ config: { ...rule }, path })
+        continue
+      }
+
+      const base = entries[index]!
+      entries[index] = {
+        config: {
+          ...base.config,
+          ...rule,
+          options: { ...base.config.options, ...rule.options },
+        },
+        /* override 改了 options 才把来源记到它；只改 severity 时仍指基础规则 */
+        path: rule.options === undefined ? base.path : path,
+      }
     }
   }
-  return rules
+
+  return entries
 }
