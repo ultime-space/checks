@@ -27,7 +27,7 @@ pnpm add -D @ultime/checks
 
 - 运行时零依赖；`vite-plus` 只用于本仓开发，不进产物。
 - 只提供 ESM；Node `>=22.18`。
-- 安装后命令名为 `checks`。
+- 安装后命令名为 `ultime-checks`。
 
 ## 快速开始
 
@@ -56,9 +56,9 @@ export default {
 2. 运行：
 
 ```bash
-npx checks run
-npx checks run src --format json
-npx checks run --changed
+npx ultime-checks run
+npx ultime-checks run src --format json
+npx ultime-checks run --changed
 ```
 
 3. 退出码：`0` 通过 / `1` 有 error 或 warning 超预算 / `2` 配置、用法或规则执行失败。
@@ -71,10 +71,10 @@ npx checks run --changed
 
 | 命令 | 作用 |
 |---|---|
-| `checks run [files...]` | 按配置检查；`files` 是路径或 glob，省略时用 `roots` |
-| `checks rules [--json]` | 列出内置规则 |
-| `checks explain <rule>` | 打印规则文档 |
-| `checks --version` / `--help` | 版本 / 帮助 |
+| `ultime-checks run [files...]` | 按配置检查；`files` 是路径或 glob，省略时用 `roots` |
+| `ultime-checks rules [--json]` | 列出内置规则 |
+| `ultime-checks explain <rule>` | 打印规则文档 |
+| `ultime-checks --version` / `--help` | 版本 / 帮助 |
 
 常用参数：`--format`、`--output-file`、`--max-warnings`、`--quiet`、`--changed`、`--since <ref>`、`--config`、`--cwd`、`--rule`、`--ignore-rule`、`--stdin`、`--update-baseline`、`--prune-baseline`。全量说明见 [USAGE](./USAGE.md)。
 
@@ -105,8 +105,8 @@ npx checks run --changed
 ### 存量接入
 
 ```bash
-checks run --update-baseline   # 用当前结果重写基线（CI 环境拒绝）
-checks run --prune-baseline    # 只收缩已有基线条目
+ultime-checks run --update-baseline   # 用当前结果重写基线（CI 环境拒绝）
+ultime-checks run --prune-baseline    # 只收缩已有基线条目
 ```
 
 单行例外写在违规行上一行：
@@ -139,8 +139,8 @@ console.log(report.errorCount, report.warningCount, report.results)
 | 路径 | 说明 |
 |---|---|
 | `dist/` | 构建产物；`prepublishOnly` 强制重建，不进 git |
-| `bin/checks.js` | CLI 薄入口，加载 `dist/cli.js` |
-| `docs/rules/` | 随包发布的规则文档；`checks explain` 读取这里 |
+| `bin/ultime-checks.js` | CLI 薄入口，加载 `dist/cli.js` |
+| `docs/rules/` | 随包发布的规则文档；`ultime-checks explain` 读取这里 |
 | `README.md` / `USAGE.md` / `CHANGELOG.md` | 使用说明与变更记录 |
 | `LICENSE` / `SECURITY.md` / `CONTRIBUTING.md` | 许可、安全与贡献约定 |
 

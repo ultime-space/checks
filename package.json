@@ -21,7 +21,7 @@
     "url": "git+https://github.com/ultime-space/checks.git"
   },
   "bin": {
-    "checks": "./bin/checks.js"
+    "ultime-checks": "./bin/ultime-checks.js"
   },
   "files": [
     "bin",

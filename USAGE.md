@@ -10,13 +10,13 @@
 
 ```bash
 npm i -D @ultime/checks
-npx checks --version
-npx checks run
+npx ultime-checks --version
+npx ultime-checks run
 ```
 
 - 只提供 ESM；Node `>=22.18`。
 - 运行时零依赖；`vite-plus` 只用于本仓开发。
-- 命令名 `checks`；也可在 `package.json` 的 `scripts` 里直接写 `checks run`。
+- 命令名 `ultime-checks`；也可在 `package.json` 的 `scripts` 里直接写 `ultime-checks run`。
 - 配置文件默认取当前目录的 `checks.config.mjs`；用 `--config <path>` 指定其它文件。
 
 ---
@@ -106,10 +106,10 @@ export default {
 
 | 命令 | 作用 |
 |---|---|
-| `checks run [files...]` | 运行检查（默认命令） |
-| `checks rules [--json]` | 列出内置规则；`--json` 输出结构化列表 |
-| `checks explain <rule>` | 打印规则文档；`<rule>` 可写 `text` 或 `checks/text` |
-| `checks --version` / `--help` | 版本 / 帮助 |
+| `ultime-checks run [files...]` | 运行检查（默认命令） |
+| `ultime-checks rules [--json]` | 列出内置规则；`--json` 输出结构化列表 |
+| `ultime-checks explain <rule>` | 打印规则文档；`<rule>` 可写 `text` 或 `checks/text` |
+| `ultime-checks --version` / `--help` | 版本 / 帮助 |
 
 ### 3.2 选项
 
@@ -328,8 +328,8 @@ const legacy = '旧文案'
 ## 八、增量检查
 
 ```bash
-checks run --changed
-checks run --since origin/main
+ultime-checks run --changed
+ultime-checks run --since origin/main
 ```
 
 | 模式 | 取哪些文件 |
@@ -436,10 +436,10 @@ jobs:
         with:
           node-version: 22
       - run: npm i -D @ultime/checks
-      - run: npx checks run --format github
+      - run: npx ultime-checks run --format github
 ```
 
-PR 想只看改动时，把最后一行换成 `npx checks run --since origin/${{ github.base_ref }} --format github`；需要 `fetch-depth: 0`。
+PR 想只看改动时，把最后一行换成 `npx ultime-checks run --since origin/${{ github.base_ref }} --format github`；需要 `fetch-depth: 0`。
 
 ### 10.2 GitHub Code Scanning：SARIF
 
@@ -454,7 +454,7 @@ steps:
     with:
       node-version: 22
   - run: npm i -D @ultime/checks
-  - run: npx checks run --format sarif --output-file checks.sarif
+  - run: npx ultime-checks run --format sarif --output-file checks.sarif
   - uses: github/codeql-action/upload-sarif@v3
     with:
       sarif_file: checks.sarif
@@ -468,7 +468,7 @@ steps:
 |---|---|
 | `找不到配置文件` | 建 `checks.config.mjs`，或用 `--config` 指定 |
 | 退出码 2 + `未知字段` | 配置里写了不认识的字段；按提示的可用字段改名 |
-| 退出码 2 + `未知规则` | `use` 拼写错误；用 `checks rules` 查看 |
+| 退出码 2 + `未知规则` | `use` 拼写错误；用 `ultime-checks rules` 查看 |
 | 退出码 2 + `workspace 目录不存在` | `workspace` 相对 `--cwd`，确认路径与启动目录 |
 | `无法解析引用` 不阻断 | `unresolved` 固定 `warn`（`locked`），当前不支持升级为 error；先修路径，或把阻断交给 `imports` 的 `forbid` 等规则 |
 | `checks/suppress` 报缺少 reason | 指令必须写 `reason="…"` |

@@ -24,13 +24,13 @@ const VALUE_FLAGS = new Set([
 
 const BOOLEAN_FLAGS = new Set(['stdin', 'quiet', 'json', 'update-baseline', 'prune-baseline', 'changed'])
 
-const HELP = `checks —— 仓库约束检测
+const HELP = `ultime-checks —— 仓库约束检测
 
 用法：
-  checks [run] [files...] [options]    运行检查（默认命令）
-  checks rules [--json]                列出内置规则
-  checks explain <rule>                查看规则文档
-  checks --help | --version
+  ultime-checks [run] [files...] [options]    运行检查（默认命令）
+  ultime-checks rules [--json]                列出内置规则
+  ultime-checks explain <rule>                查看规则文档
+  ultime-checks --help | --version
 
 选项：
   --config <path>            配置文件，默认 checks.config.mjs
@@ -178,7 +178,7 @@ async function execute(argv: string[], io: CliIo): Promise<number> {
   }
   if (parsed.command === 'explain') {
     const name = parsed.files[0]
-    if (!name) throw new ChecksError('用法：checks explain <rule>', 'USAGE')
+    if (!name) throw new ChecksError('用法：ultime-checks explain <rule>', 'USAGE')
     const rule = builtinRules[name] ?? builtinRules[normalizeRuleId(name).slice('checks/'.length)]
     if (!rule) throw new ChecksError(`未知规则：${name}`, 'USAGE')
     const file = new URL(`../docs/rules/${rule.name}.md`, import.meta.url)
