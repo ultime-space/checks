@@ -61,6 +61,14 @@ describe('配置诊断', () => {
     })
   })
 
+  it('$schema 作为元信息放行', async () => {
+    const checker = await createChecker({
+      cwd: process.cwd(),
+      config: { $schema: './schema.json', rules: [] },
+    })
+    expect(checker.getConfig().rules).toEqual([])
+  })
+
   it('未知规则在创建时给出 CONFIG_RULE 与路径', async () => {
     await expect(createChecker({ cwd: process.cwd(), config: { rules: [{ use: 'nope' }] } })).rejects.toMatchObject({
       code: 'CONFIG_RULE',

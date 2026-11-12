@@ -79,6 +79,8 @@ export interface ChecksOverride {
 }
 
 export interface ChecksConfig {
+  /** 编辑器 schema 提示，元信息，不参与规则运行 */
+  $schema?: string
   /** 检测根，相对 `cwd`；roots / ignore / overrides / baseline 与结果路径都相对它。 */
   workspace?: string
   roots?: string[]
