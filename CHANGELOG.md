@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 - 待发布
+
+### Added
+
+- `workspace` 从语义标记变为检测根：`roots` / `ignore` / `overrides.files` / `baseline` 与结果路径都相对它；`--changed` / `--since` 也从该根取改动。
+- Node API 新增 `checker.workspaceRoot`。
+
+### Changed
+
+- 配置不再静默忽略未知字段；`ChecksError` 增加字段路径 `path`。
+- 错误码细化为 `CONFIG` / `CONFIG_FIELD` / `CONFIG_RULE` / `CONFIG_OPTION` / `USAGE` / `RULE`；规则 options 非法统一报 `CONFIG_OPTION`。
+- 未知规则改为在 `createChecker` 阶段失败，不再等第一个文件。
+
 ## 0.2.1 - 2026-11-11
 
 ### Changed

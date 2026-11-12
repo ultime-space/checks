@@ -9,7 +9,7 @@
 
 ## 选项
 
-- 选项从 `Record<string, unknown>` 解析，非法值抛 `ChecksError('CONFIG')`；
+- 选项从 `Record<string, unknown>` 解析，非法值抛 `ChecksError(..., 'CONFIG')`；运行时统一映射为 `CONFIG_OPTION` 并回填规则实例路径；
 - 默认值写进文档，不藏在实现里；
 - 不新增配置项，除非已有两个以上规则需要。
 

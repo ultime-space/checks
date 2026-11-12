@@ -34,7 +34,7 @@ const HELP = `checks —— 仓库约束检测
 
 选项：
   --config <path>            配置文件，默认 checks.config.mjs
-  --cwd <dir>                工作目录，默认当前目录
+  --cwd <dir>                启动目录，默认当前目录；检测根由配置 workspace 决定
   --format <text|json|sarif|github|模块>  输出格式，默认 text
   --output-file <path>       把结果写入文件
   --max-warnings <n>         warning 超过 n 时以 1 退出
@@ -200,13 +200,14 @@ async function execute(argv: string[], io: CliIo): Promise<number> {
   if ((since || changed) && (update || prune)) {
     throw new ChecksError('基线操作不能与 --since / --changed 同时使用', 'USAGE')
   }
-  const onlyFiles = since || changed ? changedFiles(cwd, since) : undefined
 
   const checker = await createChecker({
     cwd,
     config: parsed.values.get('config'),
     ...(baselinePath ? { baseline: baselinePath } : {}),
   })
+
+  const onlyFiles = since || changed ? changedFiles(checker.workspaceRoot, since) : undefined
 
   const useStdin = parsed.booleans.has('stdin')
   const stdinFile = parsed.values.get('stdin-filename')
@@ -222,8 +223,8 @@ async function execute(argv: string[], io: CliIo): Promise<number> {
 
   const baselineFile = baselinePath ?? checker.getConfig().baseline ?? '.checks-baseline.json'
   if (update || prune) {
-    if (update) updateBaseline(cwd, baselineFile, report)
-    else pruneBaseline(cwd, baselineFile, report)
+    if (update) updateBaseline(checker.workspaceRoot, baselineFile, report)
+    else pruneBaseline(checker.workspaceRoot, baselineFile, report)
     io.err(`✓ 基线已${update ? '更新' : '收缩'}：${baselineFile}`)
     return 0
   }
@@ -270,6 +271,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   } catch (error) {
     if (error instanceof ChecksError) {
       io.err(`✗ ${error.message}`)
+      if (error.path) io.err(`  字段：${error.path}`)
       return 2
     }
     io.err(`✗ ${error instanceof Error ? error.message : String(error)}`)

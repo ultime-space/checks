@@ -41,6 +41,6 @@ describe('checks/cycles', () => {
       cwd: process.cwd(),
       config: { roots: ['tests/fixtures/cycles'], rules: [{ use: 'cycles', options: { ignoreTypeOnly: 'yes' } }] },
     })
-    await expect(checker.lintFiles()).rejects.toMatchObject({ code: 'CONFIG' })
+    await expect(checker.lintFiles()).rejects.toMatchObject({ code: 'CONFIG_OPTION' })
   })
 })

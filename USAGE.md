@@ -48,7 +48,7 @@ export default {
 | `baseline` | `string` | `.checks-baseline.json` | 基线文件路径 |
 | `rules` | `RuleConfig[]` | `[]` | 规则实例 |
 | `overrides` | `Override[]` | — | 按文件覆盖同名规则 |
-| `workspace` | `string` | — | 保留字段，当前只作语义标记 |
+| `workspace` | `string` | — | 检测根，相对 `--cwd`；见 [§2.4](#24-workspace-模式) |
 
 `RuleConfig`：
 
@@ -80,6 +80,24 @@ overrides: [
 - glob 只支持 `*`、`**`、`?`、`{a,b}`；`[abc]` 按字面量处理。
 - 只收集工作根内的文件；`..` 之外的路径会被丢弃。
 
+### 2.4 workspace 模式
+
+配置放在仓库根、只检查其中一个包时，用 `workspace` 指定检测根：
+
+```js
+export default {
+  workspace: 'packages/a',
+  roots: ['.'],
+  rules: [/* … */],
+}
+```
+
+- `workspace` 相对 `--cwd` 解析；目录不存在或不是目录时退出码 2，并给出字段路径。
+- `roots`、`ignore`、`overrides.files`、`baseline` 与结果里的文件路径都相对 workspace 根。
+- 配置文件本身仍按 `--cwd` 查找；`--output-file` 仍相对 `--cwd`。
+- `--changed` / `--since` 也从 workspace 根取改动。
+- 未知配置字段直接报错，不静默忽略。
+
 ---
 
 ## 三、CLI
@@ -98,7 +116,7 @@ overrides: [
 | 选项 | 说明 |
 |---|---|
 | `--config <path>` | 配置文件，默认 `checks.config.mjs` |
-| `--cwd <dir>` | 工作根，默认当前目录 |
+| `--cwd <dir>` | 启动目录，默认当前目录；检测根由配置 `workspace` 决定 |
 | `--format <name\|path>` | `text`（默认）/ `json` / `sarif` / `github`，或自定义 formatter 模块 |
 | `--output-file <path>` | 结果写入文件（相对 `--cwd`），不再打印到 stdout |
 | `--max-warnings <n>` | warning 数超过 `n` 时退出码 1；`0` 表示任何 warning 都失败 |
@@ -107,7 +125,7 @@ overrides: [
 | `--ignore-rule <name>` | 从报告中排除指定规则 |
 | `--changed` | 只检查工作区改动（未暂存 + 已暂存 + 未跟踪） |
 | `--since <ref>` | 只检查 `git diff <ref>...HEAD` 与工作区改动 |
-| `--baseline <path>` | 指定基线文件 |
+| `--baseline <path>` | 指定基线文件，相对 workspace 根 |
 | `--update-baseline` | 用当前结果重写基线；CI 环境（`CI` 变量存在）拒绝 |
 | `--prune-baseline` | 只收缩基线条目，不吸收新问题 |
 | `--stdin` | 从 stdin 读取内容，需配合 `--stdin-filename` |
@@ -299,6 +317,7 @@ const legacy = '旧文案'
 ```
 
 - 按 `file → rule → 计数` 抵消；同一文件同一规则最多抵消记录的数量，不按行匹配。
+- 基线文件路径相对 workspace 根。
 - 同一文件同一规则新增问题会先占用预算，可能导致旧问题重新出现；这是计数式基线的已知代价。
 - `--update-baseline`：用当前结果**重写**；`CI` 环境变量存在时拒绝。
 - `--prune-baseline`：只保留仍存在的条目，数量取当前值与旧值的较小者。
@@ -320,6 +339,7 @@ checks run --since origin/main
 
 - 依赖 git；非 git 仓库或 git 不可用时退出码 2。
 - 只检查展开范围内、且命中改动集合的文件。
+- 改动集合从 workspace 根取；未配置 `workspace` 时即 `--cwd`。
 - CI 里用 `--since` 时，checkout 需 `fetch-depth: 0`。
 
 ---
@@ -344,12 +364,23 @@ const single = await checker.lintText('const a = 1', { filePath: 'src/a.ts' })
 
 | 选项 | 说明 |
 |---|---|
-| `cwd` | 工作根，默认 `process.cwd()` |
+| `cwd` | 启动目录，默认 `process.cwd()`；配置文件按它解析 |
 | `config` | 配置文件路径或配置对象 |
-| `baseline` | 基线路径；`false` 关闭；缺省用配置值或 `.checks-baseline.json` |
+| `baseline` | 基线路径，相对 workspace 根；`false` 关闭；缺省用配置值或 `.checks-baseline.json` |
 | `resolver` | `(specifier, importer) => path \| null`，供 `imports` / `unresolved` 使用 |
 
-配置错误抛 `ChecksError`（`code` 为 `CONFIG` / `USAGE` / `RULE`）。
+配置错误抛 `ChecksError`，带 `code` 与可选字段路径 `path`：
+
+| `code` | 含义 |
+|---|---|
+| `CONFIG` | 配置文件缺失或无法载入 |
+| `CONFIG_FIELD` | 未知字段 / 字段类型不对；`path` 指向具体字段 |
+| `CONFIG_RULE` | 未知规则；在 `createChecker` 阶段失败 |
+| `CONFIG_OPTION` | 规则 options 非法；`path` 指向规则实例 |
+| `USAGE` | 用法错误，如 `filePath` 越出 workspace 根 |
+| `RULE` | 规则超时或执行失败 |
+
+`checker.workspaceRoot` 是解析后的检测根：配置了 `workspace` 时为其绝对路径，否则等于 `cwd`。
 
 ### 9.2 `lintFiles` / `lintText`
 
@@ -379,7 +410,7 @@ interface CheckReport {
 }
 ```
 
-路径统一为相对 `cwd` 的 posix 路径。
+路径统一为相对 workspace 根的 posix 路径。
 
 ---
 
@@ -436,7 +467,9 @@ steps:
 | 现象 | 原因 / 处理 |
 |---|---|
 | `找不到配置文件` | 建 `checks.config.mjs`，或用 `--config` 指定 |
+| 退出码 2 + `未知字段` | 配置里写了不认识的字段；按提示的可用字段改名 |
 | 退出码 2 + `未知规则` | `use` 拼写错误；用 `checks rules` 查看 |
+| 退出码 2 + `workspace 目录不存在` | `workspace` 相对 `--cwd`，确认路径与启动目录 |
 | `无法解析引用` 不阻断 | `unresolved` 固定 `warn`（`locked`），当前不支持升级为 error；先修路径，或把阻断交给 `imports` 的 `forbid` 等规则 |
 | `checks/suppress` 报缺少 reason | 指令必须写 `reason="…"` |
 | `checks/suppress` 报已过期 | 续期 `expires` 或删除指令 |
