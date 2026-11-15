@@ -90,17 +90,34 @@ const inside = (file: string, root: string): boolean => file === root || file.st
 function readOwner(cwd: string, root: string): Owner {
   let name: string | undefined
   const declared = new Set<string>()
+  const file = path.resolve(cwd, root, 'package.json')
 
+  let text: string
   try {
-    const pkg = JSON.parse(fs.readFileSync(path.resolve(cwd, root, 'package.json'), 'utf8')) as Record<string, unknown>
-    if (typeof pkg.name === 'string') name = pkg.name
-    for (const field of DEP_FIELDS) {
-      const value = pkg[field]
-      if (!value || typeof value !== 'object' || Array.isArray(value)) continue
-      for (const dependency of Object.keys(value)) declared.add(dependency)
-    }
-  } catch {
-    /* 没有 package.json 时只做边界检查 */
+    text = fs.readFileSync(file, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { root, declared }
+    throw error
+  }
+
+  let pkg: Record<string, unknown>
+  try {
+    pkg = JSON.parse(text) as Record<string, unknown>
+  } catch (error) {
+    throw new ChecksError(
+      `${root}/package.json 无法解析：${error instanceof Error ? error.message : String(error)}`,
+      'RULE',
+    )
+  }
+  if (pkg === null || typeof pkg !== 'object' || Array.isArray(pkg)) {
+    throw new ChecksError(`${root}/package.json 必须是对象`, 'RULE')
+  }
+
+  if (typeof pkg.name === 'string') name = pkg.name
+  for (const field of DEP_FIELDS) {
+    const value = pkg[field]
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+    for (const dependency of Object.keys(value)) declared.add(dependency)
   }
 
   return { root, ...(name ? { name } : {}), declared }

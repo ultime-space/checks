@@ -1,6 +1,20 @@
-import { describe, expect, it } from 'vite-plus/test'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { createChecker } from '../src/index.ts'
 import type { CheckReport, ChecksConfig } from '../src/types.ts'
+
+const temps: string[] = []
+const tempDir = (): string => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'checks-imports-'))
+  temps.push(dir)
+  return dir
+}
+
+afterEach(() => {
+  while (temps.length) fs.rmSync(temps.pop()!, { recursive: true, force: true })
+})
 
 const config: ChecksConfig = {
   roots: ['tests/fixtures/imports'],
@@ -70,6 +84,26 @@ describe('checks/imports', () => {
 
     const index = messagesOf(report, 'packages/a/src/index.ts')
     expect(index.some((message) => message.ruleId === 'checks/unresolved')).toBe(false)
+  })
+
+  it('package.json 无法解析时规则失败，不静默跳过', async () => {
+    const dir = tempDir()
+    fs.mkdirSync(path.join(dir, 'packages/a/src'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'packages/a/package.json'), '{ bad')
+    fs.writeFileSync(path.join(dir, 'packages/a/src/index.ts'), "import '@acme/x'\n")
+
+    const broken = await createChecker({
+      cwd: dir,
+      config: {
+        roots: ['.'],
+        rules: [{ use: 'imports', options: { packageRoots: ['packages/a'], packages: ['@acme/'] } }],
+      },
+    })
+
+    await expect(broken.lintFiles()).rejects.toMatchObject({
+      code: 'RULE',
+      message: expect.stringContaining('package.json'),
+    })
   })
 
   it('非法 forbid 正则报配置错误', async () => {
