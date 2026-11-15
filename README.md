@@ -159,6 +159,7 @@ console.log(report.errorCount, report.warningCount, report.results)
 ## 版本与兼容
 
 - `0.x` 阶段：minor 可含破坏性变更；API 不承诺稳定。
+- 0.4.0：CLI 改用内部 `@ultime/cli`，默认命令为 `run`；规则 ID、Node API 与报告形状不变。
 - 规则 ID `checks/<rule>` 稳定；改名视为破坏性变更。
 - `checks/unresolved` 固定 `warn`，配置 `severity` 不改变（避免把「解析失败」误当阻断）。
 - ESM-only；Node `>=22.18`；产物 `target: node22`。
