@@ -1,6 +1,6 @@
 # 使用说明
 
-> 适用版本：0.3.x
+> 适用版本：0.4.x
 > 本文是 `@ultime/checks` 的完整使用手册：配置、CLI、输出、规则、基线、抑制、Node API 与 CI。
 > 安装与定位见 [README](./README.md)；规则判据见 [`docs/rules`](./docs/rules)。
 
@@ -15,7 +15,7 @@ npx ultime-checks run
 ```
 
 - 只提供 ESM；Node `>=22.18`。
-- 运行时零依赖；`vite-plus` 只用于本仓开发。
+- 零第三方运行时依赖；CLI 解析 / 帮助 / 退出码来自内部 `@ultime/cli`；`vite-plus` 只用于本仓开发。
 - 命令名 `ultime-checks`；也可在 `package.json` 的 `scripts` 里直接写 `ultime-checks run`。
 - 配置文件默认取当前目录的 `checks.config.mjs`；用 `--config <path>` 指定其它文件。
 
@@ -121,8 +121,8 @@ export default {
 | `--output-file <path>` | 结果写入文件（相对 `--cwd`），不再打印到 stdout |
 | `--max-warnings <n>` | warning 数超过 `n` 时退出码 1；`0` 表示任何 warning 都失败 |
 | `--quiet` | 只显示 error；不影响退出码计算 |
-| `--rule <name>` | 只报告指定规则；**规则仍全部执行**，只过滤输出 |
-| `--ignore-rule <name>` | 从报告中排除指定规则 |
+| `--rule <name>` | 只报告指定规则；**规则仍全部执行**，过滤后的结果参与退出码统计 |
+| `--ignore-rule <name>` | 从报告中排除指定规则，同样参与退出码统计 |
 | `--changed` | 只检查工作区改动（未暂存 + 已暂存 + 未跟踪） |
 | `--since <ref>` | 只检查 `git diff <ref>...HEAD` 与工作区改动 |
 | `--baseline <path>` | 指定基线文件，相对 workspace 根 |
@@ -320,7 +320,7 @@ const legacy = '旧文案'
 - 基线文件路径相对 workspace 根。
 - 同一文件同一规则新增问题会先占用预算，可能导致旧问题重新出现；这是计数式基线的已知代价。
 - `--update-baseline`：用当前结果**重写**；`CI` 环境变量存在时拒绝。
-- `--prune-baseline`：只保留仍存在的条目，数量取当前值与旧值的较小者。
+- `--prune-baseline`：只保留仍存在的条目，数量取当前计数；不吸收新的 file → rule 组合。
 - 报告会显示 `· 基线抵掉 N 条，失效 M 条`；`M > 0` 时可用 `--prune-baseline` 收缩。
 
 ---

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-11-15
+
+### Changed
+
+- CLI 解析 / 帮助 / 退出码改用内部 `@ultime/cli`；默认命令为 `run`，未注册的首个 token 与 `--` 之后的内容都作为文件参数。
+- 零依赖口径改为“零第三方运行时依赖；允许内部 `@ultime/cli`”。
+
+### Fixed
+
+- `USAGE.md` 的 `--rule` / `--ignore-rule` 退出码口径与 `--prune-baseline` 计数口径和实现对齐。
+
 ## 0.3.0 - 2026-11-12
 
 ### Breaking

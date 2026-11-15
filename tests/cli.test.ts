@@ -37,6 +37,26 @@ describe('checks CLI', () => {
     expect(out.join('\n')).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
+  it('无命令默认执行 run', async () => {
+    const dir = tempDir()
+    fs.writeFileSync(path.join(dir, 'checks.config.mjs'), "export default { roots: ['.'], rules: [] }\n")
+    const { io } = collector(dir)
+    expect(await runCli([], io)).toBe(0)
+  })
+
+  it('无命令时裸文件参数交给默认 run', async () => {
+    const dir = tempDir()
+    fs.writeFileSync(path.join(dir, 'a.ts'), '// 内部\n')
+    fs.writeFileSync(
+      path.join(dir, 'checks.config.mjs'),
+      "export default { roots: ['.'], rules: [{ use: 'text', options: { include: 'comments', deny: ['内部'] } }] }\n",
+    )
+
+    const { io, out } = collector(dir)
+    expect(await runCli(['a.ts'], io)).toBe(1)
+    expect(out.join('\n')).toContain('a.ts')
+  })
+
   it('rules 列出内置规则', async () => {
     const { io, out } = collector()
     expect(await runCli(['rules'], io)).toBe(0)

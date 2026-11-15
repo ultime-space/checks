@@ -1,5 +1,15 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  CliError,
+  flagBool,
+  flagValue,
+  runCli as baseRunCli,
+  type CliContext,
+  type CliSpec,
+  type FlagSpec,
+  type ParsedArgs,
+} from '@ultime/cli'
 import { createChecker } from './api'
 import { pruneBaseline, updateBaseline } from './baseline'
 import { ChecksError } from './config'
@@ -8,21 +18,6 @@ import { changedFiles } from './git'
 import { builtinRules, ruleList } from './rules'
 import type { CheckReport } from './types'
 import { packageVersion } from './version'
-
-const VALUE_FLAGS = new Set([
-  'config',
-  'cwd',
-  'format',
-  'output-file',
-  'max-warnings',
-  'rule',
-  'ignore-rule',
-  'stdin-filename',
-  'baseline',
-  'since',
-])
-
-const BOOLEAN_FLAGS = new Set(['stdin', 'quiet', 'json', 'update-baseline', 'prune-baseline', 'changed'])
 
 const HELP = `ultime-checks —— 仓库约束检测
 
@@ -51,81 +46,29 @@ const HELP = `ultime-checks —— 仓库约束检测
 
 退出码：0 通过 / 1 有 error 或 warning 超预算 / 2 配置、用法或规则执行失败`
 
+const RUN_FLAGS: FlagSpec = {
+  config: 'string',
+  cwd: 'string',
+  format: 'string',
+  'output-file': 'string',
+  'max-warnings': 'string',
+  rule: 'string',
+  'ignore-rule': 'string',
+  'stdin-filename': 'string',
+  baseline: 'string',
+  since: 'string',
+  stdin: 'boolean',
+  quiet: 'boolean',
+  'update-baseline': 'boolean',
+  'prune-baseline': 'boolean',
+  changed: 'boolean',
+}
+
 export interface CliIo {
   cwd?: string
   out(line: string): void
   err(line: string): void
   stdin?(): string
-}
-
-type Command = 'run' | 'rules' | 'explain' | 'help' | 'version'
-
-interface ParsedArgs {
-  command: Command
-  files: string[]
-  values: Map<string, string>
-  booleans: Set<string>
-}
-
-function parseArgs(argv: string[]): ParsedArgs {
-  const args = [...argv]
-  const values = new Map<string, string>()
-  const booleans = new Set<string>()
-  const files: string[] = []
-
-  let command: Command = 'run'
-  const first = args[0]
-  if (first === 'run' || first === 'rules' || first === 'explain' || first === 'help' || first === 'version') {
-    command = first
-    args.shift()
-  }
-
-  let literal = false
-  for (let index = 0; index < args.length; index++) {
-    const arg = args[index]
-    if (arg === undefined) continue
-    if (literal) {
-      files.push(arg)
-      continue
-    }
-    if (arg === '--') {
-      literal = true
-      continue
-    }
-    if (arg === '-h' || arg === '--help') {
-      command = 'help'
-      continue
-    }
-    if (arg === '-v' || arg === '--version') {
-      command = 'version'
-      continue
-    }
-    if (!arg.startsWith('--')) {
-      if (arg.startsWith('-')) throw new ChecksError(`未知参数：${arg}`, 'USAGE')
-      files.push(arg)
-      continue
-    }
-
-    const body = arg.slice(2)
-    const separator = body.indexOf('=')
-    const key = separator === -1 ? body : body.slice(0, separator)
-    const inline = separator === -1 ? undefined : body.slice(separator + 1)
-
-    if (VALUE_FLAGS.has(key)) {
-      const value = inline ?? args[++index]
-      if (value === undefined) throw new ChecksError(`--${key} 缺少值`, 'USAGE')
-      values.set(key, value)
-      continue
-    }
-    if (BOOLEAN_FLAGS.has(key)) {
-      if (inline !== undefined) throw new ChecksError(`--${key} 不接受值`, 'USAGE')
-      booleans.add(key)
-      continue
-    }
-    throw new ChecksError(`未知参数：--${key}`, 'USAGE')
-  }
-
-  return { command, files, values, booleans }
 }
 
 const normalizeRuleId = (value: string): string => (value.startsWith('checks/') ? value : `checks/${value}`)
@@ -151,51 +94,16 @@ function filterReport(report: CheckReport, keep: (ruleId: string, severity: 1 | 
   }
 }
 
-async function execute(argv: string[], io: CliIo): Promise<number> {
-  const parsed = parseArgs(argv)
-
-  if (parsed.command === 'help') {
-    io.out(HELP)
-    return 0
-  }
-  if (parsed.command === 'version') {
-    io.out(packageVersion())
-    return 0
-  }
-  if (parsed.command === 'rules') {
-    if (parsed.booleans.has('json')) {
-      io.out(
-        JSON.stringify(
-          ruleList().map((rule) => ({ id: `checks/${rule.name}`, description: rule.description })),
-          null,
-          2,
-        ),
-      )
-      return 0
-    }
-    for (const rule of ruleList()) io.out(`checks/${rule.name}  ${rule.description}`)
-    return 0
-  }
-  if (parsed.command === 'explain') {
-    const name = parsed.files[0]
-    if (!name) throw new ChecksError('用法：ultime-checks explain <rule>', 'USAGE')
-    const rule = builtinRules[name] ?? builtinRules[normalizeRuleId(name).slice('checks/'.length)]
-    if (!rule) throw new ChecksError(`未知规则：${name}`, 'USAGE')
-    const file = new URL(`../docs/rules/${rule.name}.md`, import.meta.url)
-    if (!fs.existsSync(file)) throw new ChecksError(`缺少规则文档：docs/rules/${rule.name}.md`, 'USAGE')
-    io.out(fs.readFileSync(file, 'utf8').trimEnd())
-    return 0
-  }
-
-  const cwd = path.resolve(io.cwd ?? process.cwd(), parsed.values.get('cwd') ?? '.')
-  const baselinePath = parsed.values.get('baseline')
-  const update = parsed.booleans.has('update-baseline')
-  const prune = parsed.booleans.has('prune-baseline')
+async function executeRun(args: ParsedArgs, ctx: CliContext, io: CliIo): Promise<number> {
+  const cwd = path.resolve(ctx.cwd, flagValue(args, 'cwd') ?? '.')
+  const baselinePath = flagValue(args, 'baseline')
+  const update = flagBool(args, 'update-baseline')
+  const prune = flagBool(args, 'prune-baseline')
   if (update && prune) throw new ChecksError('--update-baseline 与 --prune-baseline 不能同时使用', 'USAGE')
   if (update && process.env.CI) throw new ChecksError('CI 环境不允许生成基线', 'USAGE')
 
-  const since = parsed.values.get('since')
-  const changed = parsed.booleans.has('changed')
+  const since = flagValue(args, 'since')
+  const changed = flagBool(args, 'changed')
   if (since && changed) throw new ChecksError('--since 与 --changed 不能同时使用', 'USAGE')
   if ((since || changed) && (update || prune)) {
     throw new ChecksError('基线操作不能与 --since / --changed 同时使用', 'USAGE')
@@ -203,47 +111,48 @@ async function execute(argv: string[], io: CliIo): Promise<number> {
 
   const checker = await createChecker({
     cwd,
-    config: parsed.values.get('config'),
+    config: flagValue(args, 'config'),
     ...(baselinePath ? { baseline: baselinePath } : {}),
   })
 
   const onlyFiles = since || changed ? changedFiles(checker.workspaceRoot, since) : undefined
 
-  const useStdin = parsed.booleans.has('stdin')
-  const stdinFile = parsed.values.get('stdin-filename')
+  const useStdin = flagBool(args, 'stdin')
+  const stdinFile = flagValue(args, 'stdin-filename')
   if (useStdin && !stdinFile) throw new ChecksError('--stdin 需要同时指定 --stdin-filename', 'USAGE')
 
+  const files = args.positional
   const runOptions = { baseline: !update && !prune, ...(onlyFiles ? { onlyFiles } : {}) }
   const report = useStdin
     ? await checker.lintText(io.stdin ? io.stdin() : fs.readFileSync(0, 'utf8'), {
         filePath: stdinFile ?? '',
         ...runOptions,
       })
-    : await checker.lintFiles(parsed.files.length > 0 ? parsed.files : undefined, runOptions)
+    : await checker.lintFiles(files.length > 0 ? files : undefined, runOptions)
 
   const baselineFile = baselinePath ?? checker.getConfig().baseline ?? '.checks-baseline.json'
   if (update || prune) {
     if (update) updateBaseline(checker.workspaceRoot, baselineFile, report)
     else pruneBaseline(checker.workspaceRoot, baselineFile, report)
-    io.err(`✓ 基线已${update ? '更新' : '收缩'}：${baselineFile}`)
+    ctx.err(`✓ 基线已${update ? '更新' : '收缩'}：${baselineFile}`)
     return 0
   }
 
   if (report.baseline?.stale) {
-    io.err(`⚠ 基线条目已失效：${report.baseline.stale} 条，运行 --prune-baseline 收缩`)
+    ctx.err(`⚠ 基线条目已失效：${report.baseline.stale} 条，运行 --prune-baseline 收缩`)
   }
-  if (report.suppressedCount) io.err(`· 行内抑制 ${report.suppressedCount} 条`)
+  if (report.suppressedCount) ctx.err(`· 行内抑制 ${report.suppressedCount} 条`)
 
-  const only = parsed.values.get('rule')
-  const ignore = parsed.values.get('ignore-rule')
+  const only = flagValue(args, 'rule')
+  const ignore = flagValue(args, 'ignore-rule')
   let filtered = report
   if (only) filtered = filterReport(filtered, (ruleId) => ruleId === normalizeRuleId(only))
   if (ignore) filtered = filterReport(filtered, (ruleId) => ruleId !== normalizeRuleId(ignore))
 
-  const display = parsed.booleans.has('quiet') ? filterReport(filtered, (_, severity) => severity === 2) : filtered
-  const format = parsed.values.get('format') ?? 'text'
+  const display = flagBool(args, 'quiet') ? filterReport(filtered, (_, severity) => severity === 2) : filtered
+  const format = flagValue(args, 'format') ?? 'text'
 
-  const rawMax = parsed.values.get('max-warnings')
+  const rawMax = flagValue(args, 'max-warnings')
   let maxWarnings: number | undefined
   if (rawMax !== undefined) {
     maxWarnings = Number(rawMax)
@@ -256,25 +165,89 @@ async function execute(argv: string[], io: CliIo): Promise<number> {
   const formatter = await resolveFormatter(cwd, format)
   const output = formatter(display, { cwd, maxWarningsExceeded })
 
-  const outputFile = parsed.values.get('output-file')
+  const outputFile = flagValue(args, 'output-file')
   if (outputFile) fs.writeFileSync(path.resolve(cwd, outputFile), `${output}\n`)
-  else io.out(output)
+  else ctx.out(output)
 
   if (filtered.errorCount > 0) return 1
   if (maxWarningsExceeded) return 1
   return 0
 }
 
-export async function runCli(argv: string[], io: CliIo): Promise<number> {
-  try {
-    return await execute(argv, io)
-  } catch (error) {
-    if (error instanceof ChecksError) {
-      io.err(`✗ ${error.message}`)
-      if (error.path) io.err(`  字段：${error.path}`)
-      return 2
-    }
-    io.err(`✗ ${error instanceof Error ? error.message : String(error)}`)
-    return 2
+function createSpec(io: CliIo): CliSpec {
+  return {
+    name: 'ultime-checks',
+    version: packageVersion(),
+    usage: HELP,
+    defaultCommand: 'run',
+    commands: {
+      run: {
+        help: 'ultime-checks run [files...] [options]',
+        flags: RUN_FLAGS,
+        run: (args, ctx) => executeRun(args, ctx, io),
+      },
+      rules: {
+        help: 'ultime-checks rules [--json]',
+        flags: {},
+        run: (args, ctx) => {
+          if (flagBool(args, 'json')) {
+            ctx.out(
+              JSON.stringify(
+                ruleList().map((rule) => ({ id: `checks/${rule.name}`, description: rule.description })),
+                null,
+                2,
+              ),
+            )
+            return 0
+          }
+          for (const rule of ruleList()) ctx.out(`checks/${rule.name}  ${rule.description}`)
+          return 0
+        },
+      },
+      explain: {
+        help: 'ultime-checks explain <rule>',
+        flags: {},
+        run: (args, ctx) => {
+          const name = args.positional[0]
+          if (!name) throw new ChecksError('用法：ultime-checks explain <rule>', 'USAGE')
+          const rule = builtinRules[name] ?? builtinRules[normalizeRuleId(name).slice('checks/'.length)]
+          if (!rule) throw new ChecksError(`未知规则：${name}`, 'USAGE')
+          const file = new URL(`../docs/rules/${rule.name}.md`, import.meta.url)
+          if (!fs.existsSync(file)) throw new ChecksError(`缺少规则文档：docs/rules/${rule.name}.md`, 'USAGE')
+          ctx.out(fs.readFileSync(file, 'utf8').trimEnd())
+          return 0
+        },
+      },
+      help: {
+        help: 'ultime-checks --help',
+        flags: {},
+        run: (_args, ctx) => {
+          ctx.out(HELP)
+          return 0
+        },
+      },
+      version: {
+        help: 'ultime-checks --version',
+        flags: {},
+        run: (_args, ctx) => {
+          ctx.out(packageVersion())
+          return 0
+        },
+      },
+    },
+    mapError: (error) => {
+      if (error instanceof CliError) return error
+      if (error instanceof ChecksError) return new CliError(error.message, { code: error.code, path: error.path })
+      return new CliError(error instanceof Error ? error.message : String(error), { code: 'CHECKS' })
+    },
   }
+}
+
+export async function runCli(argv: string[], io: CliIo): Promise<number> {
+  const ctx: CliContext = {
+    cwd: io.cwd ?? process.cwd(),
+    out: (line) => io.out(line),
+    err: (line) => io.err(line),
+  }
+  return baseRunCli(createSpec(io), argv, ctx)
 }
