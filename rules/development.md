@@ -15,6 +15,6 @@
 
 ## 产物边界
 
-- `dependencies` 为空；开发期可以用 `vite-plus` 的 CLI 与配置；
+- `dependencies` 只允许内部 `@ultime/cli`；开发期可以用 `vite-plus` 的 CLI 与配置；
 - 产物不得 import `vite-plus` / `eslint` / `oxlint`；
 - 不发布构建工具插件；ESLint 兼容适配层是后续可选入口。

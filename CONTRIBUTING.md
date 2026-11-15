@@ -15,7 +15,7 @@
 
 - **测试先行**：先写夹具与期望，再写实现；不允许改期望迁就实现。
 - **契约稳定**：规则 ID 用 `checks/<rule>`；对外结果是 `CheckReport`，贴 ESLint `LintResult` 形状。
-- **零运行时依赖**：`dependencies` 保持为空；开发期可以用 `vite-plus` 的 CLI 与配置。
+- **零第三方运行时依赖**：`dependencies` 只允许内部 `@ultime/cli`；开发期可以用 `vite-plus` 的 CLI 与配置。
 - **不发布构建工具插件**：Vite / Rollup / Rspack / Webpack 插件由使用者自己写。
 - **不静默跳过**：无法解析、规则崩溃、超时都要可见。
 
