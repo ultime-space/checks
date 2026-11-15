@@ -13,7 +13,7 @@
 | 仓库约束检测器：边界、引用、文档、词表、依赖环 | 代码风格 / 格式化工具（用 `vp lint` / `eslint` / `oxlint`） |
 | 规则逻辑 + 配置：项目词表、路径与包名全部来自配置 | 类型检查器或构建工具 |
 | 一次遍历输出 `text` / `json` / `sarif` / `github` | 自动修复器 |
-| 零运行时依赖，ESM-only，Node `>=22.18` | 网络探测器（外链不在门禁内） |
+| 零第三方运行时依赖，CLI 来自内部 `@ultime/cli`，ESM-only，Node `>=22.18` | 网络探测器（外链不在门禁内） |
 
 规则默认**不启用**：配置文件里没写的规则不会运行。
 
@@ -25,7 +25,7 @@ npm i -D @ultime/checks
 pnpm add -D @ultime/checks
 ```
 
-- 运行时零依赖；`vite-plus` 只用于本仓开发，不进产物。
+- 零第三方运行时依赖；CLI 解析 / 帮助 / 退出码来自内部 `@ultime/cli`；`vite-plus` 只用于本仓开发，不进产物。
 - 只提供 ESM；Node `>=22.18`。
 - 安装后命令名为 `ultime-checks`。
 
@@ -57,7 +57,7 @@ export default {
 
 ```bash
 npx ultime-checks run
-npx ultime-checks run src --format json
+npx ultime-checks src --format json   # 无命令时默认执行 run
 npx ultime-checks run --changed
 ```
 

@@ -1,7 +1,7 @@
 # AGENTS.md — @ultime/checks
 
 > 给在本仓库工作的 AI 与协作者：入口、可写 / 只读、红线与验收。
-> 适用版本：0.3.x
+> 适用版本：0.4.x
 
 ## 先读
 
@@ -18,14 +18,15 @@
 | `src/**` | 规则与 CLI / API 实现；改动必须带测试 |
 | `tests/**` | 与实现同批；夹具与期望先于实现 |
 | `docs/rules/**` | 规则行为变化时同步 |
-| `package.json` / `vite.config.ts` | 工具链变更；`dependencies` 保持为空 |
+| `package.json` / `vite.config.ts` | 工具链变更；`dependencies` 只允许内部 `@ultime/cli` |
 
 只读：`dist/**`、`node_modules/**`。
 
 ## 红线
 
 - **测试先行**：先写夹具与期望，再写实现；不许改期望迁就实现。
-- **零运行时依赖**：`dependencies` 为空；产物不 import `vite-plus` / `eslint` / `oxlint`。
+- **阶段 review**：每个阶段完成先 review 代码与文档，P0 / P1 修完再继续。
+- **零第三方运行时依赖**：`dependencies` 只允许内部 `@ultime/cli`；产物不 import `vite-plus` / `eslint` / `oxlint`。
 - **规则 ID 稳定**：`checks/<rule>`；Finding 的 `file` 用 posix 相对路径。
 - **不发布构建工具插件**：Vite / Rollup / Rspack / Webpack 插件由使用者自己写。
 - **不静默跳过**：无法解析、规则崩溃、超时都要可见。
