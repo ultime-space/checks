@@ -136,7 +136,8 @@ function readHeadings(cwd: string, file: string, cache: Map<string, Headings>): 
   let text = ''
   try {
     text = fs.readFileSync(path.resolve(cwd, file), 'utf8')
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     /* 文件不存在时由链接检查报告 */
   }
 
