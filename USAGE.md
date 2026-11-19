@@ -1,6 +1,6 @@
 # 使用说明
 
-> 适用版本：0.4.x；外部规则 `use: Rule` 为 0.5.x 未发布。
+> 适用版本：0.5.x。
 > 本文是 `@ultime/checks` 的完整使用手册：配置、CLI、输出、规则、基线、抑制、Node API 与 CI。
 > 安装与定位见 [README](./README.md)；规则判据见 [`docs/rules`](./docs/rules)。
 
