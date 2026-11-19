@@ -20,5 +20,6 @@
 ## 入口
 
 - 配置：`checks.config.mjs`
+- 外部规则：配置 `use: Rule`，规则实现由产品包提供（0.5.0+）
 - CLI：`ultime-checks run` / `ultime-checks rules` / `ultime-checks explain <rule>`
 - Node API：`import { createChecker } from '@ultime/checks'`

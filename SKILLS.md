@@ -10,7 +10,8 @@
 | 只查改动 | `ultime-checks run --changed` / `--since <ref>` | 依赖 git，非 git 环境退出码 2 |
 | 检测根 | 配置 `workspace` | roots / baseline / overrides 与结果路径都相对该根 |
 | 存量接入 | `ultime-checks run --update-baseline` / `--prune-baseline` | 基线按 `file → rule → 计数` |
-| 规则发现 | `ultime-checks rules` / `ultime-checks explain <rule>` | 列出规则或打印规则文档 |
+| 规则发现 | `ultime-checks rules` / `ultime-checks explain <rule>` | 列出内置规则或打印内置规则文档 |
+| 外部规则 | 配置 `use: Rule` | 规则实现由产品包提供，checks 只负责运行（0.5.0+） |
 | Node API | `@ultime/checks` | `createChecker` / `lintFiles` / `lintText` |
 
 规则实现与判据见 [docs/rules](./docs/rules)。

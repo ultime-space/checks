@@ -27,7 +27,7 @@
 - **测试先行**：先写夹具与期望，再写实现；不许改期望迁就实现。
 - **阶段 review**：每个阶段完成先 review 代码与文档，P0 / P1 修完再继续。
 - **零第三方运行时依赖**：`dependencies` 只允许内部 `@ultime/cli`；产物不 import `vite-plus` / `eslint` / `oxlint`。
-- **规则 ID 稳定**：`checks/<rule>`；Finding 的 `file` 用 posix 相对路径。
+- **规则 ID 稳定**：内置 `checks/<rule>`；外部规则 `<owner>/<name>`；Finding 的 `file` 用 posix 相对路径。
 - **不发布构建工具插件**：Vite / Rollup / Rspack / Webpack 插件由使用者自己写。
 - **不静默跳过**：无法解析、规则崩溃、超时都要可见。
 

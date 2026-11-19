@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 - 未发布
+
+### Added
+
+- 配置支持 `use: Rule` 外部规则对象：规则实现归产品，checks 只负责运行；外部规则 ID 使用 `<owner>/<name>` 命名空间。
+- `RuleContext` 新增 `match(pattern, file)`，外部规则复用 checks 的 glob 语义。
+- 行内抑制支持外部规则 ID 与 `*` 通配。
+
+### Changed
+
+- 外部规则可以用普通 `Error` 携带 `code: 'CONFIG'` 表达配置错误；运行器映射为 `CONFIG_OPTION`。
+
 ## 0.4.0 - 2026-11-15
 
 ### Changed
