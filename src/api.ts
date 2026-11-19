@@ -3,8 +3,10 @@ import path from 'node:path'
 import { applyBaseline, readBaseline } from './baseline'
 import { ChecksError, loadConfig, resolveWorkspaceRoot, rulesForFile, type SourcedRuleConfig } from './config'
 import { toReport } from './findings'
+import { matchGlob } from './glob'
 import { resolveImport } from './imports'
 import { builtinRules } from './rules'
+import { builtinRuleId, resolveRuleId } from './rule-id'
 import { expandPatterns, toPosix } from './scan'
 import { applySuppressions } from './suppress'
 import type {
@@ -53,15 +55,31 @@ function assertKnownRules(config: ChecksConfig): void {
   ]
 
   for (const group of groups) {
+    const seen = new Set<string>()
     group.rules.forEach((rule, index) => {
-      if (builtinRules[rule.use]) return
-      throw new ChecksError(
-        `未知规则：${rule.use}（可用：${Object.keys(builtinRules).sort().join(' / ')}）`,
-        'CONFIG_RULE',
-        `${group.prefix}[${index}].use`,
-      )
+      if (typeof rule.use === 'string') {
+        if (builtinRules[rule.use]) return
+        throw new ChecksError(
+          `未知规则：${rule.use}（可用：${Object.keys(builtinRules).sort().join(' / ')}）`,
+          'CONFIG_RULE',
+          `${group.prefix}[${index}].use`,
+        )
+      }
+
+      const id = rule.use.id!
+      if (seen.has(id)) {
+        throw new ChecksError(`重复的外部规则 ID：${id}`, 'CONFIG_RULE', `${group.prefix}[${index}].use`)
+      }
+      seen.add(id)
     })
   }
+}
+
+/** 外部规则可以用普通 Error 携带 `code`，避免依赖 checks 的错误类。 */
+const isRuleConfigError = (error: unknown): error is Error & { code: 'CONFIG' | 'CONFIG_OPTION'; path?: string } => {
+  if (!(error instanceof Error)) return false
+  const code = (error as { code?: unknown }).code
+  return code === 'CONFIG' || code === 'CONFIG_OPTION'
 }
 
 function createContext(
@@ -91,6 +109,7 @@ function createContext(
     read,
     exists: (file) => overlay.has(toPosix(file)) || fs.existsSync(path.resolve(root, file)),
     glob: (patterns) => expandPatterns({ cwd: root, patterns, ignore }),
+    match: (pattern, file) => matchGlob(pattern, file),
     resolve: async (specifier, importer) => {
       if (resolver) {
         const resolved = await resolver(specifier, importer)
@@ -122,10 +141,23 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
     const groups = new Map<string, { rules: SourcedRuleConfig[]; files: string[] }>()
     for (const file of files) {
       const rules = rulesForFile(config, file)
-      const key = JSON.stringify(rules)
+      const key = JSON.stringify(
+        rules.map(({ config: rule }) => ({
+          use: resolveRuleId(rule.use),
+          severity: rule.severity ?? null,
+          options: rule.options ?? null,
+          timeout: rule.timeout ?? null,
+        })),
+      )
       const group = groups.get(key) ?? { rules, files: [] }
       group.files.push(file)
       groups.set(key, group)
+    }
+
+    const knownRuleIds = new Set<string>(Object.keys(builtinRules).map(builtinRuleId))
+    for (const rule of config.rules ?? []) knownRuleIds.add(resolveRuleId(rule.use))
+    for (const override of config.overrides ?? []) {
+      for (const rule of override.rules) knownRuleIds.add(resolveRuleId(rule.use))
     }
 
     const findings: Finding[] = []
@@ -137,8 +169,8 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
       for (const { config: ruleConfig, path: rulePath } of group.rules) {
         if (signal?.aborted) throw signal.reason ?? new Error('aborted')
 
-        const rule = builtinRules[ruleConfig.use]
-        if (!rule) throw new ChecksError(`未知规则：${ruleConfig.use}`, 'CONFIG_RULE', `${rulePath}.use`)
+        const rule = typeof ruleConfig.use === 'string' ? builtinRules[ruleConfig.use] : ruleConfig.use
+        if (!rule) throw new ChecksError(`未知规则：${resolveRuleId(ruleConfig.use)}`, 'CONFIG_RULE', `${rulePath}.use`)
 
         if (rule.optionKeys) {
           for (const key of Object.keys(ruleConfig.options ?? {})) {
@@ -151,7 +183,7 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
           }
         }
 
-        const ruleId = `checks/${rule.name}`
+        const ruleId = resolveRuleId(ruleConfig.use)
         let produced: Finding[]
         try {
           produced = await withTimeout(
@@ -164,6 +196,9 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
             if (error.code !== 'CONFIG' && error.code !== 'CONFIG_OPTION') throw error
             throw new ChecksError(error.message, 'CONFIG_OPTION', error.path ?? `${rulePath}.options`)
           }
+          if (isRuleConfigError(error)) {
+            throw new ChecksError(error.message, 'CONFIG_OPTION', error.path ?? `${rulePath}.options`)
+          }
           throw new ChecksError(
             `规则执行失败：${ruleId}（${error instanceof Error ? error.message : String(error)}）`,
             'RULE',
@@ -173,16 +208,21 @@ export async function createChecker(options: CheckerOptions = {}): Promise<Check
         findings.push(
           ...produced.map((finding) => ({
             ...finding,
+            /* 规则 ID 由运行器统一，避免外部规则漏写或写错命名空间。 */
+            ruleId,
             level: finding.locked ? finding.level : (ruleConfig.severity ?? finding.level),
           })),
         )
       }
     }
 
-    const suppression = applySuppressions(root, files, findings, (file) => {
-      const virtual = overlay.get(file)
-      if (virtual !== undefined) return virtual
-      return fs.readFileSync(path.resolve(root, file), 'utf8')
+    const suppression = applySuppressions(root, files, findings, {
+      readFile: (file) => {
+        const virtual = overlay.get(file)
+        if (virtual !== undefined) return virtual
+        return fs.readFileSync(path.resolve(root, file), 'utf8')
+      },
+      knownRuleIds,
     })
     let kept = suppression.findings
     let baselineInfo: CheckReport['baseline']

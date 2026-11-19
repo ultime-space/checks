@@ -66,7 +66,8 @@ export interface TextRuleOptions {
 }
 
 export interface RuleConfig {
-  use: string
+  /** 内置规则名，或外部规则对象（`use: Rule`）。 */
+  use: string | Rule
   severity?: Severity
   options?: Record<string, unknown>
   timeout?: number
@@ -116,12 +117,16 @@ export interface RuleContext {
   read(file: string): string
   exists(file: string): boolean
   glob(patterns: string[]): string[]
+  /** 按 checks 的 glob 语义匹配单个路径，供外部规则复用。 */
+  match(pattern: string, file: string): boolean
   /** 解析引用：内置相对解析，或宿主注入的 resolver。返回相对 workspaceRoot 的 posix 路径。 */
   resolve(specifier: string, importer: string): Promise<string | null>
 }
 
 export interface Rule {
   name: string
+  /** 规则 ID；外部规则必须写成 `<owner>/<name>`（如 `core/tokens`），内置规则省略时用 `checks/<name>`。 */
+  id?: string
   description: string
   /** 允许的 options 键；声明后运行时拒绝未知键，避免拼错导致规则静默失效 */
   optionKeys?: readonly string[]

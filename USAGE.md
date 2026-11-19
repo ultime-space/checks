@@ -1,6 +1,6 @@
 # 使用说明
 
-> 适用版本：0.4.x
+> 适用版本：0.4.x；外部规则 `use: Rule` 为 0.5.x 未发布。
 > 本文是 `@ultime/checks` 的完整使用手册：配置、CLI、输出、规则、基线、抑制、Node API 与 CI。
 > 安装与定位见 [README](./README.md)；规则判据见 [`docs/rules`](./docs/rules)。
 
@@ -54,7 +54,7 @@ export default {
 
 | 字段 | 说明 |
 |---|---|
-| `use` | 规则名：`imports` / `unresolved` / `cycles` / `text` / `docs` / `doc-set` |
+| `use` | 内置规则名，或外部 `Rule` 对象（`use: Rule`，0.5.0+） |
 | `severity` | `error` / `warn`；覆盖规则产出的默认级别（`locked` 结果不受影响） |
 | `options` | 规则选项；各规则见 [§五「规则」](#五规则) |
 | `timeout` | 单规则超时毫秒数，默认 `120000` |
@@ -108,7 +108,7 @@ export default {
 |---|---|
 | `ultime-checks run [files...]` | 运行检查（默认命令） |
 | `ultime-checks rules [--json]` | 列出内置规则；`--json` 输出结构化列表 |
-| `ultime-checks explain <rule>` | 打印规则文档；`<rule>` 可写 `text` 或 `checks/text` |
+| `ultime-checks explain <rule>` | 打印内置规则文档；`<rule>` 可写 `text` 或 `checks/text` |
 | `ultime-checks --version` / `--help` | 版本 / 帮助 |
 
 ### 3.2 选项
@@ -121,7 +121,7 @@ export default {
 | `--output-file <path>` | 结果写入文件（相对 `--cwd`），不再打印到 stdout |
 | `--max-warnings <n>` | warning 数超过 `n` 时退出码 1；`0` 表示任何 warning 都失败 |
 | `--quiet` | 只显示 error；不影响退出码计算 |
-| `--rule <name>` | 只报告指定规则；**规则仍全部执行**，过滤后的结果参与退出码统计 |
+| `--rule <name>` | 只报告指定规则 ID（内置 `checks/text` 或外部 `core/tokens`）；**规则仍全部执行**，过滤后的结果参与退出码统计 |
 | `--ignore-rule <name>` | 从报告中排除指定规则，同样参与退出码统计 |
 | `--changed` | 只检查工作区改动（未暂存 + 已暂存 + 未跟踪） |
 | `--since <ref>` | 只检查 `git diff <ref>...HEAD` 与工作区改动 |
@@ -285,6 +285,26 @@ export default function format(results, meta) {
 
 逐条判据与修法见 [`docs/rules`](./docs/rules)。
 
+### 5.7 外部规则（`use: Rule`）
+
+内置规则只覆盖通用仓库约束；依赖产品 schema 的规则由产品导出 `Rule` 对象，配置里 import 后直接放到 `use`（0.5.0+）。
+
+```js
+import { tokensRule } from '@ultime/core/checks'
+
+export default {
+  rules: [
+    { use: tokensRule, severity: 'error', options: { manifest: 'packages/core/kernel.json' } },
+  ],
+}
+```
+
+- `Rule` 形状：`name` / `description` / `run`，必须带命名空间的 `id`（如 `core/tokens`）；写成 `checks/*` 会报 `CONFIG_FIELD`。
+- `ruleId` 由运行器统一为规则 `id`；baseline、SARIF、`--rule` / `--ignore-rule` 与行内抑制都用这个 ID。
+- 外部规则抛普通 `Error` 且 `code` 为 `CONFIG` / `CONFIG_OPTION` 时，运行器映射为 `CONFIG_OPTION`（退出码 `2`）。
+- `ctx.match(pattern, file)` 复用 checks 的 glob 语义，外部规则不需要自己实现匹配。
+- `rules` / `explain` 只列内置规则；外部规则文档由产品维护。
+
 ---
 
 ## 六、行内抑制
@@ -296,7 +316,7 @@ export default function format(results, meta) {
 const legacy = '旧文案'
 ```
 
-- 规则名可写 `text` 或 `checks/text`。
+- 规则名可写 `text` 或 `checks/text`；外部规则写完整 ID（如 `core/tokens`）；`*` 抑制下一行全部结果。
 - `reason` 必填；缺失时不生效，并报 `checks/suppress`。
 - `expires` 为 `YYYY-MM-DD`；过期后报 `checks/suppress`。
 - 只能抑制带行号的结果；文件级结果无法行内抑制。

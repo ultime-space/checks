@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { matchGlob } from './glob'
-import type { ChecksConfig, RuleConfig, Severity } from './types'
+import { resolveRuleId } from './rule-id'
+import type { ChecksConfig, Rule, RuleConfig, Severity } from './types'
 
 export type ErrorCode = 'CONFIG' | 'CONFIG_FIELD' | 'CONFIG_RULE' | 'CONFIG_OPTION' | 'USAGE' | 'RULE'
 
@@ -28,6 +29,22 @@ const OVERRIDE_KEYS = ['files', 'rules'] as const
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** 外部规则对象的最小形状；未知字段不参与校验。 */
+const isRule = (value: unknown): value is Rule => {
+  if (!isObject(value)) return false
+  if (typeof value.name !== 'string' || value.name.length === 0) return false
+  if (typeof value.description !== 'string') return false
+  if (typeof value.run !== 'function') return false
+  if (value.id !== undefined && (typeof value.id !== 'string' || value.id.length === 0)) return false
+  if (
+    value.optionKeys !== undefined &&
+    (!Array.isArray(value.optionKeys) || value.optionKeys.some((key) => typeof key !== 'string'))
+  ) {
+    return false
+  }
+  return true
+}
 
 const fieldPath = (parent: string, key: string): string => (parent ? `${parent}.${key}` : key)
 
@@ -61,8 +78,18 @@ function assertRule(input: unknown, field: string): RuleConfig {
   assertKnownKeys(input, RULE_KEYS, field)
 
   const rule = input as Record<string, unknown>
-  if (typeof rule.use !== 'string' || rule.use.length === 0) {
-    throw new ChecksError(`${field}.use 必须是非空字符串`, 'CONFIG_FIELD', `${field}.use`)
+  if (typeof rule.use === 'string') {
+    if (rule.use.length === 0) {
+      throw new ChecksError(`${field}.use 必须是非空字符串`, 'CONFIG_FIELD', `${field}.use`)
+    }
+  } else if (!isRule(rule.use)) {
+    throw new ChecksError(`${field}.use 必须是内置规则名或 Rule 对象`, 'CONFIG_FIELD', `${field}.use`)
+  } else if (!rule.use.id || !rule.use.id.includes('/') || rule.use.id.startsWith('checks/')) {
+    throw new ChecksError(
+      `${field}.use.id 必须是带命名空间的规则 ID（如 core/tokens）`,
+      'CONFIG_FIELD',
+      `${field}.use.id`,
+    )
   }
   if (rule.severity !== undefined && !SEVERITIES.has(rule.severity as Severity)) {
     throw new ChecksError(`${field}.severity 只能是 error / warn`, 'CONFIG_FIELD', `${field}.severity`)
@@ -178,7 +205,7 @@ export function rulesForFile(config: ChecksConfig, file: string): SourcedRuleCon
 
     for (const [ruleIndex, rule] of override.rules.entries()) {
       const path = `overrides[${overrideIndex}].rules[${ruleIndex}]`
-      const index = entries.findIndex((entry) => entry.config.use === rule.use)
+      const index = entries.findIndex((entry) => resolveRuleId(entry.config.use) === resolveRuleId(rule.use))
       if (index === -1) {
         entries.push({ config: { ...rule }, path })
         continue

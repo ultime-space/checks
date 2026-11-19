@@ -16,6 +16,7 @@ import { ChecksError } from './config'
 import { resolveFormatter } from './formatters'
 import { changedFiles } from './git'
 import { builtinRules, ruleList } from './rules'
+import { normalizeRuleId } from './rule-id'
 import type { CheckReport } from './types'
 import { packageVersion } from './version'
 
@@ -70,8 +71,6 @@ export interface CliIo {
   err(line: string): void
   stdin?(): string
 }
-
-const normalizeRuleId = (value: string): string => (value.startsWith('checks/') ? value : `checks/${value}`)
 
 function filterReport(report: CheckReport, keep: (ruleId: string, severity: 1 | 2) => boolean): CheckReport {
   const results = report.results
@@ -210,8 +209,10 @@ function createSpec(io: CliIo): CliSpec {
         run: (args, ctx) => {
           const name = args.positional[0]
           if (!name) throw new ChecksError('用法：ultime-checks explain <rule>', 'USAGE')
-          const rule = builtinRules[name] ?? builtinRules[normalizeRuleId(name).slice('checks/'.length)]
-          if (!rule) throw new ChecksError(`未知规则：${name}`, 'USAGE')
+          const id = normalizeRuleId(name)
+          const builtinName = id.startsWith('checks/') ? id.slice('checks/'.length) : undefined
+          const rule = builtinName ? builtinRules[builtinName] : undefined
+          if (!rule) throw new ChecksError(`未知规则：${name}（explain 只支持内置规则）`, 'USAGE')
           const file = new URL(`../docs/rules/${rule.name}.md`, import.meta.url)
           if (!fs.existsSync(file)) throw new ChecksError(`缺少规则文档：docs/rules/${rule.name}.md`, 'USAGE')
           ctx.out(fs.readFileSync(file, 'utf8').trimEnd())

@@ -73,7 +73,7 @@ npx ultime-checks run --changed
 |---|---|
 | `ultime-checks run [files...]` | 按配置检查；`files` 是路径或 glob，省略时用 `roots` |
 | `ultime-checks rules [--json]` | 列出内置规则 |
-| `ultime-checks explain <rule>` | 打印规则文档 |
+| `ultime-checks explain <rule>` | 打印内置规则文档 |
 | `ultime-checks --version` / `--help` | 版本 / 帮助 |
 
 常用参数：`--format`、`--output-file`、`--max-warnings`、`--quiet`、`--changed`、`--since <ref>`、`--config`、`--cwd`、`--rule`、`--ignore-rule`、`--stdin`、`--update-baseline`、`--prune-baseline`。全量说明见 [USAGE](./USAGE.md)。
@@ -99,6 +99,18 @@ npx ultime-checks run --changed
 | [`checks/text`](./docs/rules/text.md) | 按词表 / 正则扫描文本 |
 | [`checks/docs`](./docs/rules/docs.md) | 相对链接、锚点、头部标记、计划状态、孤儿文档 |
 | [`checks/doc-set`](./docs/rules/doc-set.md) | 包级 AI 文档齐全、版本戳、路由、出口覆盖、命名 |
+
+需要产品自有规则时，在配置里 import 规则对象，`use` 直接放对象（0.5.0+）：
+
+```js
+import { tokensRule } from '@ultime/core/checks'
+
+export default {
+  rules: [{ use: tokensRule, options: { manifest: 'packages/core/kernel.json' } }],
+}
+```
+
+规则对象需要 `name` / `description` / `run` 与带命名空间的 `id`（如 `core/tokens`）；`rules` / `explain` 只列内置规则，外部规则由产品自己的文档说明。
 
 每条规则的选项、判据与修法在 `docs/rules/<rule>.md`。
 
@@ -159,8 +171,9 @@ console.log(report.errorCount, report.warningCount, report.results)
 ## 版本与兼容
 
 - `0.x` 阶段：minor 可含破坏性变更；API 不承诺稳定。
+- 0.5.0（未发布）：支持 `use: Rule` 外部规则对象；规则实现归产品，checks 只负责运行。
 - 0.4.0：CLI 改用内部 `@ultime/cli`，默认命令为 `run`；规则 ID、Node API 与报告形状不变。
-- 规则 ID `checks/<rule>` 稳定；改名视为破坏性变更。
+- 规则 ID：内置 `checks/<rule>`；外部 `<owner>/<name>`；改名视为破坏性变更。
 - `checks/unresolved` 固定 `warn`，配置 `severity` 不改变（避免把「解析失败」误当阻断）。
 - ESM-only；Node `>=22.18`；产物 `target: node22`。
 

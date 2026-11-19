@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { builtinRules } from './rules'
+import { builtinRuleId, normalizeRuleId } from './rule-id'
 import type { Finding } from './types'
 
 interface Directive {
@@ -8,6 +9,13 @@ interface Directive {
   reason?: string
   expires?: string
   line: number
+}
+
+export interface SuppressionOptions {
+  readFile?: (file: string) => string
+  today?: string
+  /** 本次运行已配置的规则 ID；缺省只认内置规则。 */
+  knownRuleIds?: Set<string>
 }
 
 export interface SuppressionResult {
@@ -18,8 +26,6 @@ export interface SuppressionResult {
 
 const KEYWORD = 'checks-ignore-next-line'
 const DATE = /^\d{4}-\d{2}-\d{2}$/
-
-const normalizeRuleId = (value: string): string => (value.startsWith('checks/') ? value : `checks/${value}`)
 
 function pick(rest: string, key: string): string | undefined {
   const match = new RegExp(`${key}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|(\\S+))`).exec(rest)
@@ -44,9 +50,11 @@ export function applySuppressions(
   cwd: string,
   files: string[],
   findings: Finding[],
-  readFile: (file: string) => string = (file) => fs.readFileSync(path.resolve(cwd, file), 'utf8'),
-  today = new Date().toISOString().slice(0, 10),
+  options: SuppressionOptions = {},
 ): SuppressionResult {
+  const readFile = options.readFile ?? ((file: string) => fs.readFileSync(path.resolve(cwd, file), 'utf8'))
+  const today = options.today ?? new Date().toISOString().slice(0, 10)
+  const knownRuleIds = options.knownRuleIds ?? new Set(Object.keys(builtinRules).map(builtinRuleId))
   const directives = new Map<string, Map<number, Directive[]>>()
   const diagnostics: Finding[] = []
 
@@ -75,7 +83,7 @@ export function applySuppressions(
         })
       }
 
-      if (!builtinRules[parsed.ruleId.slice('checks/'.length)]) {
+      if (parsed.ruleId !== '*' && !knownRuleIds.has(parsed.ruleId)) {
         diagnostic(`抑制指令的规则不存在：${parsed.ruleId}`, '改成已注册的规则名')
         return
       }
