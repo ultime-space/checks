@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.0 - 2026-11-22
+
+### Added
+
+- `text` 输出增加源码片段（命中行前后各 1 行、中文按显示宽度对齐、超长行截断）与内置规则入口提示。
+- `FormatterMeta` 增加 `maxWarnings` / `hiddenWarnings` / `totalFiles` / `color` / `readSource`；自定义 formatter 可选择消费。
+- 内置规则文档覆盖测试：每个规则都必须有 `docs/rules/<name>.md` 且 `explain` 可读。
+
+### Changed
+
+- text 汇总改为「N 个文件命中 / N error / N warnings」，判定行放到最后；`--quiet` 隐藏的 warning 仍计入汇总。
+- `--max-warnings` 超预算时在 text 汇总中说明原因。
+- 行内抑制 / 基线摘要只由 text formatter 输出一次，不再同时写 stderr。
+- text 增加颜色；颜色由输出流 TTY 与环境变量决定，`json` / `sarif` / `github` 不变。
+
 ## 0.5.0 - 2026-11-19
 
 ### Added

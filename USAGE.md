@@ -1,6 +1,6 @@
 # 使用说明
 
-> 适用版本：0.5.x。
+> 适用版本：0.6.x。
 > 本文是 `@ultime/checks` 的完整使用手册：配置、CLI、输出、规则、基线、抑制、Node API 与 CI。
 > 安装与定位见 [README](./README.md)；规则判据见 [`docs/rules`](./docs/rules)。
 
@@ -153,13 +153,23 @@ export default {
 
 ```text
 src/a.ts
-  3:10  error  checks/text  禁止出现：TODO|FIXME
+  3:4  error  checks/text  禁止出现：TODO|FIXME
            hint: 删除或改写该片段
+      2 │ const a = 1
+      3 │ // TODO: 稍后处理
+        │    ^^^^
+      4 │ const b = 2
+    · 规则说明：ultime-checks explain checks/text
 
-1 error(s), 0 warning(s)
 · 行内抑制 1 条
 · 基线抵掉 2 条，失效 0 条
+1 个文件命中 / 1 error / 0 warnings
 ```
+
+- 源码片段只在 text 输出、文件可读且位置已知时出现；显示命中行前后各 1 行，`--stdin`、文件缺失或超过 1MB 时跳过。
+- 中文 / 全角按显示宽度对齐；超长行按 120 显示列截断，无法定位时不画指示符。
+- 颜色由输出流 TTY 与 `NO_COLOR` / `FORCE_COLOR` 决定，测试与管道输出默认无色；去掉颜色后信息完整。
+- 判定行最后输出；`--quiet` 隐藏的 warning 仍计入汇总。
 
 ### 4.2 json
 
@@ -202,7 +212,8 @@ export default function format(results, meta) {
 }
 ```
 
-- `results` 是 `CheckReport['results']`，`meta` 包含 `cwd`、`maxWarningsExceeded`、`toolVersion`。
+- `results` 是 `CheckReport['results']`，`meta` 包含 `cwd`、`maxWarningsExceeded`、`maxWarnings`、`hiddenWarnings`、`totalFiles`、`color`、`readSource`、`toolVersion`。
+- `readSource` 只在有文件可读时提供；自定义 formatter 可以直接忽略它。
 - 路径相对 `--cwd` 解析，文件必须默认导出函数，否则退出码 2。
 
 ---
