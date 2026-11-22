@@ -1,6 +1,6 @@
 {
   "name": "@ultime/checks",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "通用的仓库约束检测工具：CLI 与 Node API，规则由配置注入",
   "keywords": [
     "architecture",
@@ -56,7 +56,7 @@
     "prepare": "vp config --no-agent"
   },
   "dependencies": {
-    "@ultime/cli": "^0.4.0"
+    "@ultime/cli": "^0.5.0"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",

@@ -5,6 +5,7 @@ import {
   flagBool,
   flagValue,
   runCli as baseRunCli,
+  supportsColor,
   type CliContext,
   type CliSpec,
   type FlagSpec,
@@ -69,7 +70,27 @@ export interface CliIo {
   cwd?: string
   out(line: string): void
   err(line: string): void
+  color?: boolean
   stdin?(): string
+}
+
+const MAX_SOURCE_BYTES = 1024 * 1024
+
+/** 只对报告文件按需读一次；超限、缺失或 stdin 场景由调用方跳过。 */
+function createSourceReader(root: string): (file: string) => string | undefined {
+  const cache = new Map<string, string | undefined>()
+  return (file) => {
+    if (cache.has(file)) return cache.get(file)
+    let text: string | undefined
+    try {
+      const absolute = path.resolve(root, file)
+      if (fs.statSync(absolute).size <= MAX_SOURCE_BYTES) text = fs.readFileSync(absolute, 'utf8')
+    } catch {
+      text = undefined
+    }
+    cache.set(file, text)
+    return text
+  }
 }
 
 function filterReport(report: CheckReport, keep: (ruleId: string, severity: 1 | 2) => boolean): CheckReport {
@@ -137,11 +158,6 @@ async function executeRun(args: ParsedArgs, ctx: CliContext, io: CliIo): Promise
     return 0
   }
 
-  if (report.baseline?.stale) {
-    ctx.err(`⚠ 基线条目已失效：${report.baseline.stale} 条，运行 --prune-baseline 收缩`)
-  }
-  if (report.suppressedCount) ctx.err(`· 行内抑制 ${report.suppressedCount} 条`)
-
   const only = flagValue(args, 'rule')
   const ignore = flagValue(args, 'ignore-rule')
   let filtered = report
@@ -149,6 +165,7 @@ async function executeRun(args: ParsedArgs, ctx: CliContext, io: CliIo): Promise
   if (ignore) filtered = filterReport(filtered, (ruleId) => ruleId !== normalizeRuleId(ignore))
 
   const display = flagBool(args, 'quiet') ? filterReport(filtered, (_, severity) => severity === 2) : filtered
+  const hiddenWarnings = filtered.warningCount - display.warningCount
   const format = flagValue(args, 'format') ?? 'text'
 
   const rawMax = flagValue(args, 'max-warnings')
@@ -162,7 +179,17 @@ async function executeRun(args: ParsedArgs, ctx: CliContext, io: CliIo): Promise
   const maxWarningsExceeded = maxWarnings !== undefined && filtered.warningCount > maxWarnings
 
   const formatter = await resolveFormatter(cwd, format)
-  const output = formatter(display, { cwd, maxWarningsExceeded })
+  const color = io.color ?? supportsColor(process.stdout)
+  const readSource = useStdin ? undefined : createSourceReader(checker.workspaceRoot)
+  const output = formatter(display, {
+    cwd,
+    maxWarningsExceeded,
+    ...(maxWarnings === undefined ? {} : { maxWarnings }),
+    ...(hiddenWarnings > 0 ? { hiddenWarnings } : {}),
+    totalFiles: filtered.results.length,
+    color,
+    ...(readSource ? { readSource } : {}),
+  })
 
   const outputFile = flagValue(args, 'output-file')
   if (outputFile) fs.writeFileSync(path.resolve(cwd, outputFile), `${output}\n`)
@@ -249,6 +276,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     cwd: io.cwd ?? process.cwd(),
     out: (line) => io.out(line),
     err: (line) => io.err(line),
+    color: io.color ?? supportsColor(process.stderr),
   }
   return baseRunCli(createSpec(io), argv, ctx)
 }

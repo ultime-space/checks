@@ -78,6 +78,8 @@ npx ultime-checks run --changed
 
 常用参数：`--format`、`--output-file`、`--max-warnings`、`--quiet`、`--changed`、`--since <ref>`、`--config`、`--cwd`、`--rule`、`--ignore-rule`、`--stdin`、`--update-baseline`、`--prune-baseline`。全量说明见 [USAGE](./USAGE.md)。
 
+`text`（默认）带源码片段、内置规则入口与最后一行判定；`json` / `sarif` / `github` 保持机器格式，字段不变。
+
 ### 配置
 
 | 字段 | 默认 | 说明 |
@@ -171,6 +173,7 @@ console.log(report.errorCount, report.warningCount, report.results)
 ## 版本与兼容
 
 - `0.x` 阶段：minor 可含破坏性变更；API 不承诺稳定。
+- 0.6.0：text 输出增加源码片段、规则入口、颜色与 warning 预算提示；摘要只输出一次；`json` / `sarif` / `github` 字段不变。依赖 `@ultime/cli@^0.5.0`。
 - 0.5.0：支持 `use: Rule` 外部规则对象；规则实现归产品，checks 只负责运行。
 - 0.4.0：CLI 改用内部 `@ultime/cli`，默认命令为 `run`；规则 ID、Node API 与报告形状不变。
 - 规则 ID：内置 `checks/<rule>`；外部 `<owner>/<name>`；改名视为破坏性变更。
