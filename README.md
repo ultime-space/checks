@@ -13,7 +13,7 @@
 | 仓库约束检测器：边界、引用、文档、词表、依赖环 | 代码风格 / 格式化工具（用 `vp lint` / `eslint` / `oxlint`） |
 | 规则逻辑 + 配置：项目词表、路径与包名全部来自配置 | 类型检查器或构建工具 |
 | 一次遍历输出 `text` / `json` / `sarif` / `github` | 自动修复器 |
-| 零第三方运行时依赖，CLI 来自内部 `@ultime/cli`，ESM-only，Node `>=22.18` | 网络探测器（外链不在门禁内） |
+| 零第三方运行时依赖，ESM-only，Node `>=22.18` | 网络探测器（外链不在门禁内） |
 
 规则默认**不启用**：配置文件里没写的规则不会运行。
 
@@ -25,128 +25,53 @@ npm i -D @ultime/checks
 pnpm add -D @ultime/checks
 ```
 
-- 零第三方运行时依赖；CLI 解析 / 帮助 / 退出码来自内部 `@ultime/cli`；`vite-plus` 只用于本仓开发，不进产物。
-- 只提供 ESM；Node `>=22.18`。
-- 安装后命令名为 `ultime-checks`。
+- 只提供 ESM；Node `>=22.18`；安装后命令名为 `ultime-checks`。
+- CLI 解析、帮助与退出码来自内部 `@ultime/cli`；`vite-plus` 只用于本仓开发，不进产物。
 
 ## 快速开始
 
-1. 在仓库根建 `checks.config.mjs`：
+在仓库根建 `checks.config.mjs`：
 
 ```js
 export default {
   roots: ['src'],
   ignore: ['dist', 'coverage'],
   rules: [
-    { use: 'unresolved', severity: 'warn', options: { scope: ['src/**'] } },
     { use: 'imports', severity: 'error', options: { packageRoots: ['.'], packages: ['@acme/'] } },
-    {
-      use: 'text',
-      severity: 'error',
-      options: {
-        scope: ['src/**'],
-        include: 'comments',
-        deny: ['docs/', { pattern: 'TODO|FIXME', message: '不要留 TODO' }],
-      },
-    },
+    { use: 'unresolved', severity: 'warn', options: { scope: ['src/**'] } },
+    { use: 'text', severity: 'error', options: { scope: ['src/**'], deny: ['docs/'] } },
   ],
 }
 ```
 
-2. 运行：
+运行：
 
 ```bash
-npx ultime-checks run
-npx ultime-checks src --format json   # 无命令时默认执行 run
-npx ultime-checks run --changed
+npx ultime-checks run                  # 按配置检查
+npx ultime-checks run --changed        # 只看改动文件
+npx ultime-checks rules --json         # 列出内置规则
 ```
 
-3. 退出码：`0` 通过 / `1` 有 error 或 warning 超预算 / `2` 配置、用法或规则执行失败。
+退出码：`0` 通过 / `1` 有 error 或 warning 超预算 / `2` 配置、用法或规则执行失败。
 
-配置字段、全部 CLI 参数、基线、抑制、Node API 与 CI 示例见 [USAGE](./USAGE.md)。
-
-## 用法
-
-### CLI
-
-| 命令 | 作用 |
-|---|---|
-| `ultime-checks run [files...]` | 按配置检查；`files` 是路径或 glob，省略时用 `roots` |
-| `ultime-checks rules [--json]` | 列出内置规则 |
-| `ultime-checks explain <rule>` | 打印内置规则文档 |
-| `ultime-checks --version` / `--help` | 版本 / 帮助 |
-
-常用参数：`--format`、`--output-file`、`--max-warnings`、`--quiet`、`--changed`、`--since <ref>`、`--config`、`--cwd`、`--rule`、`--ignore-rule`、`--stdin`、`--update-baseline`、`--prune-baseline`。全量说明见 [USAGE](./USAGE.md)。
-
-`text`（默认）带源码片段、内置规则入口与最后一行判定；`json` / `sarif` / `github` 保持机器格式，字段不变。
-
-### 配置
-
-| 字段 | 默认 | 说明 |
-|---|---|---|
-| `roots` | `['.']` | 未显式传文件时的扫描根 |
-| `ignore` | `[]` | 展开时跳过的路径 / glob |
-| `baseline` | `.checks-baseline.json` | 基线文件路径 |
-| `rules` | `[]` | 规则实例；`use` 为规则名，`severity` 为 `error` / `warn` |
-| `overrides` | — | 按 glob 覆盖同名规则的选项 |
-| `workspace` | — | 检测根，相对 `--cwd`；扫描、基线、overrides 与结果路径都相对它 |
-
-### 规则
-
-| 规则 | 用途 |
-|---|---|
-| [`checks/imports`](./docs/rules/imports.md) | 相对路径边界、禁止的说明符、内部包依赖声明 |
-| [`checks/unresolved`](./docs/rules/unresolved.md) | 无法解析的相对引用（固定 `warn`） |
-| [`checks/cycles`](./docs/rules/cycles.md) | 相对引用图找环（可选，需显式配置） |
-| [`checks/text`](./docs/rules/text.md) | 按词表 / 正则扫描文本 |
-| [`checks/docs`](./docs/rules/docs.md) | 相对链接、锚点、头部标记、计划状态、孤儿文档 |
-| [`checks/doc-set`](./docs/rules/doc-set.md) | 包级 AI 文档齐全、版本戳、路由、出口覆盖、命名 |
-
-需要产品自有规则时，在配置里 import 规则对象，`use` 直接放对象（0.5.0+）：
-
-```js
-import { tokensRule } from '@ultime/core/checks'
-
-export default {
-  rules: [{ use: tokensRule, options: { manifest: 'packages/core/kernel.json' } }],
-}
-```
-
-规则对象需要 `name` / `description` / `run` 与带命名空间的 `id`（如 `core/tokens`）；`rules` / `explain` 只列内置规则，外部规则由产品自己的文档说明。
-
-每条规则的选项、判据与修法在 `docs/rules/<rule>.md`。
-
-### 存量接入
-
-```bash
-ultime-checks run --update-baseline   # 用当前结果重写基线（CI 环境拒绝）
-ultime-checks run --prune-baseline    # 只收缩已有基线条目
-```
-
-单行例外写在违规行上一行：
-
-```js
-// checks-ignore-next-line checks/text reason="历史文案，待迁移" expires="2026-12-31"
-```
-
-`reason` 必填；`expires` 过期后会报 `checks/suppress`。基线按 `file → rule → 计数` 记录，按计数抵消，不按行匹配。
-
-### Node API
+需要 Node API 时：
 
 ```ts
 import { createChecker } from '@ultime/checks'
 
 const checker = await createChecker({ cwd: process.cwd() })
 const report = await checker.lintFiles(['src/**/*.ts'])
-const single = await checker.lintText('const a = 1', { filePath: 'src/a.ts' })
-
-console.log(report.errorCount, report.warningCount, report.results)
 ```
 
-- `createChecker(options)`：`cwd` / `config`（路径或对象）/ `baseline`（路径或 `false`）/ `resolver`。
-- `checker.workspaceRoot` 是解析后的检测根；未配置 `workspace` 时等于 `cwd`。
-- `report.results` 贴 ESLint `LintResult` 形状（`filePath` / `messages[{ ruleId, severity, message, line, column }]`）。
-- 路径均为相对 workspace 根的 posix 路径。
+## 文档
+
+| 文件 | 回答什么 |
+|---|---|
+| 本页 | 是什么、怎么装、最小可跑、边界 |
+| [USAGE](./USAGE.md) | 完整手册：配置字段、全部 CLI 参数、输出格式、基线、抑制、Node API、CI 与排错 |
+| [docs/rules](./docs/rules) | 每条内置规则的判据、选项与修法；`ultime-checks explain <rule>` 读取同一份 |
+| [SKILLS](./SKILLS.md) | AI 可调用的入口、出口与错误语义 |
+| [llms.txt](./llms.txt) | AI 索引：能力、入口与文档路由 |
 
 ## 产物与目录
 
@@ -154,30 +79,25 @@ console.log(report.errorCount, report.warningCount, report.results)
 |---|---|
 | `dist/` | 构建产物；`prepublishOnly` 强制重建，不进 git |
 | `bin/ultime-checks.js` | CLI 薄入口，加载 `dist/cli.js` |
-| `docs/rules/` | 随包发布的规则文档；`ultime-checks explain` 读取这里 |
-| `README.md` / `USAGE.md` / `CHANGELOG.md` | 使用说明与变更记录 |
+| `docs/rules/` | 随包发布的规则文档 |
+| `README.md` / `USAGE.md` / `CHANGELOG.md` | 入口、手册与变更记录 |
 | `LICENSE` / `SECURITY.md` / `CONTRIBUTING.md` | 许可、安全与贡献约定 |
 
 发布包不含 `src/`、`tests/`、`scripts/`、`AGENTS.md`、`rules/`。
-`dist/*.js` 默认压缩；类型与声明保持可读，注释与说明留在源码与文档。
 
 ## 边界
 
-- 不做代码风格、类型检查、构建与打包。
-- 不做自动修复；只报告。
+- 不做代码风格、类型检查、构建与打包，也不做自动修复。
 - 不联网：外链可达性不在门禁内。
-- 不发布 Vite / Rollup / Rspack / Webpack 插件。
-- 不读 `tsconfig` paths；别名由宿主的 `resolver` 或 `forbid` 处理。
+- 不发布打包器插件，不读 `tsconfig` paths。
 - 只解析相对引用；裸包名、`node:`、`http(s):` 跳过。
 
 ## 版本与兼容
 
 - `0.x` 阶段：minor 可含破坏性变更；API 不承诺稳定。
-- 0.6.0：text 输出增加源码片段、规则入口、颜色与 warning 预算提示；摘要只输出一次；`json` / `sarif` / `github` 字段不变。依赖 `@ultime/cli@^0.5.0`。
-- 0.5.0：支持 `use: Rule` 外部规则对象；规则实现归产品，checks 只负责运行。
-- 0.4.0：CLI 改用内部 `@ultime/cli`，默认命令为 `run`；规则 ID、Node API 与报告形状不变。
+- 0.6.1：README 改为入口卡，用法细节统一到 `USAGE`；本仓 `check` 串入自检，发布前覆盖自身约束。运行时行为不变。
+- 0.6.0：text 输出增加源码片段、规则入口、颜色与 warning 预算提示；`json` / `sarif` / `github` 字段不变。
 - 规则 ID：内置 `checks/<rule>`；外部 `<owner>/<name>`；改名视为破坏性变更。
-- `checks/unresolved` 固定 `warn`，配置 `severity` 不改变（避免把「解析失败」误当阻断）。
 - ESM-only；Node `>=22.18`；产物 `target: node22`。
 
 ## 许可
