@@ -49,10 +49,10 @@
   },
   "scripts": {
     "build": "vp pack",
-    "check": "vp check && pnpm build && node bin/ultime-checks.js run",
+    "check": "vp check && vp run build && node bin/ultime-checks.js run",
     "test": "vp test",
     "fmt": "vp fmt",
-    "prepublishOnly": "pnpm check && pnpm test",
+    "prepublishOnly": "vp run check && vp run test",
     "prepare": "vp config --no-agent"
   },
   "dependencies": {
