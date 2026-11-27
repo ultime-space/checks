@@ -51,4 +51,10 @@ describe('行内抑制', () => {
     const report = await lint('// boundary-allow: 历史\n// 内部\n')
     expect(report.errorCount).toBe(1)
   })
+
+  it('散文与字符串里的关键词不当作指令', async () => {
+    const report = await lint('const KEYWORD = "checks-ignore-next-line"\n// 内部\n')
+    expect(report.errorCount).toBe(1)
+    expect(report.results[0]?.messages.some((message) => message.ruleId === 'checks/suppress')).toBe(false)
+  })
 })
