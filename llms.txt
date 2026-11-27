@@ -1,6 +1,6 @@
 # @ultime/checks
 
-> 适用版本：0.4.x
+> 适用版本：0.6.x
 > 仓库约束检测工具：CLI 与 Node API，规则由配置注入；运行时零第三方依赖，CLI 来自内部 @ultime/cli。
 
 ## 文档
