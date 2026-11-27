@@ -26,6 +26,8 @@ export interface SuppressionResult {
 
 const KEYWORD = 'checks-ignore-next-line'
 const DATE = /^\d{4}-\d{2}-\d{2}$/
+const DIRECTIVE_PREFIX = /^(?:\/\/|\/\*|\*|#|<!--)\s*$/
+const RULE_TOKEN = /^(?:\*|[a-z0-9-]+(?:\/[a-z0-9-]+)?)$/
 
 function pick(rest: string, key: string): string | undefined {
   const match = new RegExp(`${key}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|(\\S+))`).exec(rest)
@@ -35,9 +37,11 @@ function pick(rest: string, key: string): string | undefined {
 function parse(line: string): { ruleId: string; reason?: string; expires?: string } | null {
   const index = line.indexOf(KEYWORD)
   if (index === -1) return null
+  const prefix = line.slice(0, index)
+  if (prefix.trim() !== '' && !DIRECTIVE_PREFIX.test(prefix)) return null
   const after = line.slice(index + KEYWORD.length).trim()
   const [rule, ...rest] = after.split(/\s+/)
-  if (!rule || rule.includes('<') || rule.includes('>')) return null
+  if (!rule || !RULE_TOKEN.test(rule)) return null
   const remainder = rest.join(' ')
   return {
     ruleId: normalizeRuleId(rule),
