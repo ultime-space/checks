@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 - 2026-11-27
+
+### Changed
+
+- 包内脚本改为 `vp run` 入口，`check` 与 `prepublishOnly` 不再硬依赖 pnpm 二进制；开发者可用任意包管理器通过脚本入口调用。运行时不变。
+
 ## 0.6.1 - 2026-11-27
 
 ### Changed

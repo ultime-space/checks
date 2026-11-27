@@ -95,6 +95,7 @@ const report = await checker.lintFiles(['src/**/*.ts'])
 ## 版本与兼容
 
 - `0.x` 阶段：minor 可含破坏性变更；API 不承诺稳定。
+- 0.6.2：包内脚本改用 `vp run` 入口，去掉对 pnpm 二进制的硬依赖；运行时行为不变。
 - 0.6.1：README 改为入口卡，用法细节统一到 `USAGE`；本仓 `check` 串入自检，发布前覆盖自身约束。运行时行为不变。
 - 0.6.0：text 输出增加源码片段、规则入口、颜色与 warning 预算提示；`json` / `sarif` / `github` 字段不变。
 - 规则 ID：内置 `checks/<rule>`；外部 `<owner>/<name>`；改名视为破坏性变更。
