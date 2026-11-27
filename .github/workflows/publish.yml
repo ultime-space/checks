@@ -58,12 +58,13 @@ jobs:
         run: |
           name=$(node -p "require('./package.json').name")
           version=$(node -p "require('./package.json').version")
-          for i in $(seq 1 20); do
-            if npm view "$name@$version" version >/dev/null 2>&1; then
+          # npm CDN 边缘节点可能继续返回旧 packument：强制在线取，并放宽到 10 分钟再判失败
+          for i in $(seq 1 40); do
+            if npm view --prefer-online "$name@$version" version >/dev/null 2>&1; then
               echo "$name@$version 已在 registry 上"
               exit 0
             fi
             sleep 15
           done
-          echo "::error::$name@$version 发布后 5 分钟仍查不到，检查 Publish 步骤日志"
+          echo "::error::$name@$version 发布后 10 分钟仍查不到，检查 Publish 步骤日志"
           exit 1
