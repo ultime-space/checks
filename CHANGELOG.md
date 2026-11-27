@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.1 - 2026-11-27
+
+### Changed
+
+- README 改为入口卡：保留安装、最小可跑、文档地图与边界；配置字段、CLI 参数、输出格式、基线与 Node API 统一到 `USAGE.md`。
+- 新增本仓 `checks.config.mjs`，`check` 在构建后串入 `ultime-checks run`；发布前门禁覆盖自身约束，`prepublishOnly` 不再重复构建。
+
+### Fixed
+
+- 抑制指令只认行首注释与合法规则名；散文、字符串里提到关键词不再误报 `checks/suppress`。
+- `llms.txt` 的适用版本从 0.4.x 同步到 0.6.x。
+
 ## 0.6.0 - 2026-11-22
 
 ### Added

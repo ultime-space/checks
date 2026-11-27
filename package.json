@@ -1,6 +1,6 @@
 {
   "name": "@ultime/checks",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "通用的仓库约束检测工具：CLI 与 Node API，规则由配置注入",
   "keywords": [
     "architecture",
@@ -49,10 +49,10 @@
   },
   "scripts": {
     "build": "vp pack",
-    "check": "vp check",
+    "check": "vp check && pnpm build && node bin/ultime-checks.js run",
     "test": "vp test",
     "fmt": "vp fmt",
-    "prepublishOnly": "pnpm check && pnpm test && pnpm build",
+    "prepublishOnly": "pnpm check && pnpm test",
     "prepare": "vp config --no-agent"
   },
   "dependencies": {
